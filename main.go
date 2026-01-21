@@ -8,15 +8,13 @@ import (
 )
 
 func main() {
-	// 設定靜態檔案伺服器
-	fs := http.FileServer(http.Dir("./static"))
-
 	// 註冊路由
 	// API 路由
 	http.HandleFunc("/api/echo", handlers.EchoHandler)
-	
+
 	// 靜態檔案路由 (根路徑匹配)
-	http.Handle("/", fs)
+	// 將原本的 fs := http.FileServer(...) 封裝進 handlers.StaticHandler()
+	http.Handle("/", handlers.StaticHandler())
 
 	port := ":3000"
 	fmt.Printf("伺服器已啟動: http://localhost%s\n", port)
