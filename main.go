@@ -4,18 +4,13 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
+	"web-demo/config"
 	"web-demo/handlers"
-
-	"github.com/joho/godotenv"
 )
 
 func main() {
-	// 載入 .env 檔案
-	// 如果沒有 .env 檔案，這裡不會報錯，直接使用系統環境變數或預設值
-	if err := godotenv.Load(); err != nil {
-		log.Println("未發現 .env 檔案，將使用系統環境變數")
-	}
+	// 載入設定
+	cfg := config.Load()
 
 	// 註冊路由
 	// API 路由
@@ -24,15 +19,11 @@ func main() {
 	// 靜態檔案路由 (根路徑匹配)
 	http.Handle("/", handlers.StaticHandler())
 
-	// 從環境變數取得 PORT，預設為 3000
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "3000"
-	}
-
 	// 確保 port 有冒號前綴
-	addr := ":" + port
+	addr := ":" + cfg.Port
 
+	fmt.Printf("應用程式名稱: %s\n", cfg.AppName)
+	fmt.Printf("檔案上傳路徑: %s\n", cfg.UploadPath)
 	fmt.Printf("伺服器已啟動: http://localhost%s\n", addr)
 	fmt.Printf("API 測試路徑: http://localhost%s/api/echo\n", addr)
 
