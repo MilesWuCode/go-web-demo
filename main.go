@@ -16,20 +16,25 @@ func main() {
 	// 初始化資料庫
 	database.Init(cfg)
 
-	// 註冊路由
-	// API 路由
+	// 設定靜態檔案伺服器
+	// 將 /static/ 路徑的請求，交給 http.FileServer 處理
+	// http.StripPrefix 會移除 URL 中的 /static/ 前綴，然後在 public/ 目錄中尋找檔案
+	// 例如：/static/css/main.css -> public/css/main.css
+	staticFileServer := http.FileServer(http.Dir("./public"))
+	http.Handle("/static/", http.StripPrefix("/static/", staticFileServer))
+
+	// 註冊頁面路由
+	http.HandleFunc("/", handlers.HomeHandler)
+	http.HandleFunc("/about", handlers.AboutHandler)
+
+	// 註冊 API 路由
 	http.HandleFunc("/api/echo", handlers.EchoHandler)
 
-	// 靜態檔案路由 (根路徑匹配)
-	http.Handle("/", handlers.StaticHandler())
-
-	// 確保 port 有冒號前綴
+	// --- Server 啟動 ---
 	addr := ":" + cfg.Port
 
 	fmt.Printf("應用程式名稱: %s\n", cfg.AppName)
-	fmt.Printf("檔案上傳路徑: %s\n", cfg.UploadPath)
 	fmt.Printf("伺服器已啟動: http://localhost%s\n", addr)
-	fmt.Printf("API 測試路徑: http://localhost%s/api/echo\n", addr)
 
 	// 啟動 Web Server
 	if err := http.ListenAndServe(addr, nil); err != nil {
