@@ -18,8 +18,7 @@ func main() {
 
 	// 設定靜態檔案伺服器
 	// 這是標準作法：將 /static/ 路徑的請求，交給 http.FileServer 處理
-	dir := http.Dir("./public")
-	fileServer := http.FileServer(dir)
+	fileServer := http.FileServer(http.Dir("./public"))
 	http.Handle("/static/", http.StripPrefix("/static/", fileServer))
 
 	// 註冊頁面路由
