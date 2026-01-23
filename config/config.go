@@ -3,6 +3,7 @@ package config
 import (
 	"log"
 	"os"
+	"sync"
 
 	"github.com/joho/godotenv"
 )
@@ -15,23 +16,30 @@ type AppConfig struct {
 	DBPath     string
 }
 
-// Load 初始化並回傳應用程式設定
-func Load() *AppConfig {
-	// 嘗試載入 .env 檔案 (非必須)
-	if err := godotenv.Load(); err != nil {
-		// 這裡改用 log.Println 提示即可，因為在正式環境可能只用系統環境變數
-		log.Println("提示: 未讀取到 .env 檔案，將使用系統環境變數或預設值")
-	}
+var (
+	instance *AppConfig
+	once     sync.Once
+)
 
-	return &AppConfig{
-		// 這裡設定您提到的固定參數
-		AppName:    "Go Web Demo Application",
-		UploadPath: "./uploads",
-		DBPath:     "db.sqlite",
+// Get 使用單例模式回傳 AppConfig 的唯一實例。
+// 設定檔的載入邏輯只會在第一次被呼叫時執行。
+func Get() *AppConfig {
+	// once.Do 會保證在多執行緒環境下，內部的函式也只會被執行一次。
+	once.Do(func() {
+		// 嘗試載入 .env 檔案 (非必須)
+		if err := godotenv.Load(); err != nil {
+			log.Println("提示: 未讀取到 .env 檔案，將使用系統環境變數或預設值")
+		}
 
-		// Port 仍然優先讀取環境變數，若無則使用預設值
-		Port: getEnv("PORT", "3000"),
-	}
+		// 載入設定並將其賦值給套件級別的 instance 變數
+		instance = &AppConfig{
+			AppName:    "Go Web Demo Application",
+			UploadPath: "./uploads",
+			DBPath:     "db.sqlite",
+			Port:       getEnv("PORT", "3000"),
+		}
+	})
+	return instance
 }
 
 // getEnv 讀取環境變數，若不存在則回傳預設值

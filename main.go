@@ -13,7 +13,7 @@ import (
 
 func main() {
 	// 1. 載入設定
-	cfg := config.Load()
+	cfg := config.Get()
 
 	// 2. 初始化資料庫
 	database.Init(cfg)
