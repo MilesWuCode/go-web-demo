@@ -17,11 +17,10 @@ func main() {
 	database.Init(cfg)
 
 	// 設定靜態檔案伺服器
-	// 將 /static/ 路徑的請求，交給 http.FileServer 處理
-	// http.StripPrefix 會移除 URL 中的 /static/ 前綴，然後在 public/ 目錄中尋找檔案
-	// 例如：/static/css/main.css -> public/css/main.css
-	staticFileServer := http.FileServer(http.Dir("./public"))
-	http.Handle("/static/", http.StripPrefix("/static/", staticFileServer))
+	// 這是標準作法：將 /static/ 路徑的請求，交給 http.FileServer 處理
+	dir := http.Dir("./public")
+	fileServer := http.FileServer(dir)
+	http.Handle("/static/", http.StripPrefix("/static/", fileServer))
 
 	// 註冊頁面路由
 	http.HandleFunc("/", handlers.HomeHandler)
