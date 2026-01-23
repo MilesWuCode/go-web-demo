@@ -12,6 +12,7 @@ type AppConfig struct {
 	AppName    string
 	UploadPath string
 	Port       string
+	DBPath     string
 }
 
 // Load 初始化並回傳應用程式設定
@@ -26,6 +27,7 @@ func Load() *AppConfig {
 		// 這裡設定您提到的固定參數
 		AppName:    "Go Web Demo Application",
 		UploadPath: "./uploads",
+		DBPath:     "db.sqlite",
 
 		// Port 仍然優先讀取環境變數，若無則使用預設值
 		Port: getEnv("PORT", "3000"),

@@ -5,12 +5,16 @@ import (
 	"log"
 	"net/http"
 	"web-demo/config"
+	"web-demo/database"
 	"web-demo/handlers"
 )
 
 func main() {
 	// 載入設定
 	cfg := config.Load()
+
+	// 初始化資料庫
+	database.Init(cfg)
 
 	// 註冊路由
 	// API 路由
