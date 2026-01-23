@@ -1,27 +1,25 @@
 package routes
 
-import "net/http"
+import (
+	"net/http"
+	"web-demo/server"
+)
 
-// NewRouter 建立並回傳一個設定好所有應用程式路由的 http.ServeMux
-func NewRouter() *http.ServeMux {
-	// 建立一個新的 ServeMux，避免使用全域的 DefaultServeMux
+// NewRouter 現在接收 Application 實例，並註冊其上的方法作為 Handler
+func NewRouter(app *server.Application) *http.ServeMux {
 	mux := http.NewServeMux()
 
-	// 註冊所有 Web 路由
-	for _, route := range webRoutes {
-		mux.HandleFunc(route.Path, route.Handler)
-	}
-
-	// 註冊所有 API 路由
-	for _, route := range apiRoutes {
-		mux.HandleFunc(route.Path, route.Handler)
-	}
-
-	// 處理靜態檔案
-	// 靜態檔案的 Handler 需要另外註冊，因為它不是 http.HandlerFunc 類型
+	// 註冊靜態檔案伺服器
 	dir := http.Dir("./public")
 	fileServer := http.FileServer(dir)
 	mux.Handle("/static/", http.StripPrefix("/static/", fileServer))
+
+	// 註冊 API 路由
+	mux.HandleFunc("/api/echo", app.EchoHandler)
+
+	// 註冊頁面路由
+	mux.HandleFunc("/about", app.AboutHandler)
+	mux.HandleFunc("/", app.HomeHandler) // HomeHandler 作為捕獲所有路由的處理器
 
 	return mux
 }
