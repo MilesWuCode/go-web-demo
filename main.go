@@ -6,36 +6,26 @@ import (
 	"net/http"
 	"web-demo/config"
 	"web-demo/database"
-	"web-demo/handlers"
+	"web-demo/routes"
 )
 
 func main() {
-	// 載入設定
+	// 1. 載入設定
 	cfg := config.Load()
 
-	// 初始化資料庫
+	// 2. 初始化資料庫
 	database.Init(cfg)
 
-	// 設定靜態檔案伺服器
-	// 這是標準作法：將 /static/ 路徑的請求，交給 http.FileServer 處理
-	fileServer := http.FileServer(http.Dir("./public"))
-	http.Handle("/static/", http.StripPrefix("/static/", fileServer))
+	// 3. 建立並註冊所有路由
+	router := routes.NewRouter()
 
-	// 註冊頁面路由
-	http.HandleFunc("/", handlers.HomeHandler)
-	http.HandleFunc("/about", handlers.AboutHandler)
-
-	// 註冊 API 路由
-	http.HandleFunc("/api/echo", handlers.EchoHandler)
-
-	// --- Server 啟動 ---
+	// 4. 啟動伺服器
 	addr := ":" + cfg.Port
-
 	fmt.Printf("應用程式名稱: %s\n", cfg.AppName)
 	fmt.Printf("伺服器已啟動: http://localhost%s\n", addr)
 
-	// 啟動 Web Server
-	if err := http.ListenAndServe(addr, nil); err != nil {
+	// 將我們自己建立的 router 傳遞給伺服器
+	if err := http.ListenAndServe(addr, router); err != nil {
 		log.Fatal(err)
 	}
 }
