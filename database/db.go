@@ -3,38 +3,37 @@ package database
 import (
 	"log"
 	"web-demo/config"
-	"web-demo/models" // 引入 models 套件
+	"web-demo/models"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
-var DB *gorm.DB
-
-// Init 初始化資料庫連線並執行自動遷移
-func Init(cfg *config.AppConfig) {
-	var err error
-	DB, err = gorm.Open(sqlite.Open(cfg.DBPath), &gorm.Config{})
+// NewDB 建立並回傳一個新的資料庫連線實例
+func NewDB(cfg *config.AppConfig) (*gorm.DB, error) {
+	db, err := gorm.Open(sqlite.Open(cfg.DBPath), &gorm.Config{})
 	if err != nil {
-		log.Fatalf("無法連接資料庫: %v", err)
+		return nil, err
 	}
 	log.Printf("資料庫已成功連線: %s", cfg.DBPath)
 
 	// 自動遷移
 	log.Println("正在執行資料庫遷移...")
-
-	err = DB.AutoMigrate(&models.User{}, &models.Post{}) // 加入 Post 模型
-
+	err = db.AutoMigrate(&models.User{}, &models.Post{})
 	if err != nil {
-		log.Fatalf("資料庫遷移失敗: %v", err)
+		return nil, err // 如果遷移失敗，也回傳錯誤
 	}
-
 	log.Println("資料庫遷移完成。")
+
+	return db, nil
 }
 
-// CloseDB 用於安全地關閉資料庫連線
-func CloseDB() {
-	sqlDB, err := DB.DB()
+// CloseDB 用於安全地關閉指定的資料庫連線
+func CloseDB(db *gorm.DB) {
+	if db == nil {
+		return
+	}
+	sqlDB, err := db.DB()
 	if err != nil {
 		log.Printf("錯誤：無法從 GORM 取得底層 SQL 連線: %v", err)
 		return
@@ -44,3 +43,4 @@ func CloseDB() {
 		log.Printf("錯誤：關閉資料庫連線失敗: %v", err)
 	}
 }
+

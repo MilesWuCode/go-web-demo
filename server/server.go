@@ -1,8 +1,15 @@
 package server
 
-import "html/template"
+import (
+	"html/template"
+	"web-demo/config"
 
-// Application 結構用來存放共享的依賴，例如模板快取和資料庫連線
+	"gorm.io/gorm"
+)
+
+// Application 結構用來存放共享的依賴
 type Application struct {
+	Config        *config.AppConfig
+	DB            *gorm.DB
 	TemplateCache map[string]*template.Template
 }
