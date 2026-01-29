@@ -1,3 +1,6 @@
+init:
+	touch ./db.sqlite
+
 run:
 	go run .
 
