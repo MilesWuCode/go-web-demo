@@ -18,11 +18,11 @@ func main() {
 		Mode:    gen.WithoutContext | gen.WithDefaultQuery | gen.WithQueryInterface,
 	})
 
-	gormdb, err := gorm.Open(sqlite.Open("db.sqlite"), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open("db.sqlite"), &gorm.Config{})
 	if err != nil {
 		panic(err)
 	}
-	g.UseDB(gormdb) // reuse your gorm db
+	g.UseDB(db)
 
 	// Generate basic type-safe DAO API for struct `model.User` following conventions
 	g.ApplyBasic(model.User{})

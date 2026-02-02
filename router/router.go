@@ -2,8 +2,8 @@ package router
 
 import (
 	"net/http"
-	"web-demo/handlers/api"
-	"web-demo/handlers/web"
+	"web-demo/handler/api"
+	"web-demo/handler/web"
 	"web-demo/server"
 )
 
