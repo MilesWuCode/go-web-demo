@@ -10,6 +10,7 @@ import (
 
 // NewDB 建立並回傳一個新的資料庫連線實例
 func NewDB(cfg *config.AppConfig) (*gorm.DB, error) {
+	// 建立資料庫連線
 	db, err := gorm.Open(sqlite.Open(cfg.DBPath), &gorm.Config{})
 	if err != nil {
 		return nil, err

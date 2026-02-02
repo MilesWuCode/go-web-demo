@@ -1,11 +1,12 @@
 package main
 
 import (
+	"log"
+	"web-demo/config"
+	"web-demo/database"
 	"web-demo/model"
 
-	"gorm.io/driver/sqlite"
 	"gorm.io/gen"
-	"gorm.io/gorm"
 )
 
 // Dynamic SQL
@@ -13,15 +14,24 @@ type Querier interface {
 }
 
 func main() {
+	// 設定值
+	cfg := config.Get()
+
+	// 建立 GORM Gen 生成器
 	g := gen.NewGenerator(gen.Config{
 		OutPath: "./generated/query",
 		Mode:    gen.WithoutContext | gen.WithDefaultQuery | gen.WithQueryInterface,
 	})
 
-	db, err := gorm.Open(sqlite.Open("db.sqlite"), &gorm.Config{})
+	// 建立資料庫連線
+	db, err := database.NewDB(cfg)
 	if err != nil {
-		panic(err)
+		log.Fatalf("無法連接資料庫: %v", err)
 	}
+	// 使用 defer 確保程式結束時關閉資料庫
+	defer database.CloseDB(db)
+
+	// 注入資料庫連線
 	g.UseDB(db)
 
 	// Generate basic type-safe DAO API for struct `model.User` following conventions
