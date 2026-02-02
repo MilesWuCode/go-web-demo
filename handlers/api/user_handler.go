@@ -4,7 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
-	"web-demo/models"
+	"web-demo/model"
 
 	"gorm.io/gorm"
 )
@@ -18,9 +18,9 @@ type UserResponse struct {
 
 // GetAllUsers 處理 GET /api/users 請求
 func (h *APIHandler) GetAllUsers(w http.ResponseWriter, r *http.Request) {
-	var users []models.User
+	var users []model.User
 	// 使用 WithContext 傳遞請求的 context
-	if err := h.App.DB.WithContext(r.Context()).Model(&models.User{}).Find(&users).Error; err != nil {
+	if err := h.App.DB.WithContext(r.Context()).Model(&model.User{}).Find(&users).Error; err != nil {
 		h.App.ErrorJSON(w, err, http.StatusInternalServerError)
 		return
 	}
@@ -46,7 +46,7 @@ func (h *APIHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var user models.User
+	var user model.User
 	// 使用 WithContext 傳遞請求的 context
 	err = h.App.DB.WithContext(r.Context()).First(&user, id).Error
 	if err != nil {

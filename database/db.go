@@ -3,7 +3,6 @@ package database
 import (
 	"log"
 	"web-demo/config"
-	"web-demo/models"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -18,12 +17,12 @@ func NewDB(cfg *config.AppConfig) (*gorm.DB, error) {
 	log.Printf("資料庫已成功連線: %s", cfg.DBPath)
 
 	// 自動遷移
-	log.Println("正在執行資料庫遷移...")
-	err = db.AutoMigrate(&models.User{}, &models.Post{})
-	if err != nil {
-		return nil, err // 如果遷移失敗，也回傳錯誤
-	}
-	log.Println("資料庫遷移完成。")
+	// log.Println("正在執行資料庫遷移...")
+	// err = db.AutoMigrate(&model.User{}, &model.Post{})
+	// if err != nil {
+	// 	return nil, err // 如果遷移失敗，也回傳錯誤
+	// }
+	// log.Println("資料庫遷移完成。")
 
 	return db, nil
 }
@@ -43,4 +42,3 @@ func CloseDB(db *gorm.DB) {
 		log.Printf("錯誤：關閉資料庫連線失敗: %v", err)
 	}
 }
-

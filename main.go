@@ -11,7 +11,7 @@ import (
 	"time"
 	"web-demo/config"
 	"web-demo/database"
-	"web-demo/routes"
+	"web-demo/router"
 	"web-demo/server"
 	"web-demo/view"
 )
@@ -40,13 +40,13 @@ func main() {
 		TemplateCache: templateCache,
 	}
 
-	router := routes.NewRouter(&app)
+	newRouter := router.NewRouter(&app)
 
 	// --- 設定與啟動伺服器 ---
 	addr := ":" + cfg.Port
 	srv := &http.Server{
 		Addr:    addr,
-		Handler: router,
+		Handler: newRouter,
 	}
 
 	go func() {

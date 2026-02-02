@@ -5,13 +5,13 @@ import (
 	"path/filepath"
 )
 
-// NewCache 解析 templates 目錄下所有 .html 檔案並回傳一個快取 map
+// NewCache 解析 template 目錄下所有 .html 檔案並回傳一個快取 map
 func NewCache() (map[string]*template.Template, error) {
 	// 初始化一個新的 map 來作為快取
 	cache := map[string]*template.Template{}
 
 	// 使用 Glob 找出所有符合 *.html 模式的檔案路徑
-	pages, err := filepath.Glob("templates/*.html")
+	pages, err := filepath.Glob("template/*.html")
 	if err != nil {
 		return nil, err
 	}

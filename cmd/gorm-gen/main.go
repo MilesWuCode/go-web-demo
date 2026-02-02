@@ -1,7 +1,7 @@
 package main
 
 import (
-	"web-demo/models"
+	"web-demo/model"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gen"
@@ -25,10 +25,10 @@ func main() {
 	g.UseDB(gormdb) // reuse your gorm db
 
 	// Generate basic type-safe DAO API for struct `model.User` following conventions
-	g.ApplyBasic(models.User{})
+	g.ApplyBasic(model.User{})
 
 	// Generate Type Safe API with Dynamic SQL defined on Querier interface for `model.User` and `model.Company`
-	g.ApplyInterface(func(Querier) {}, models.User{}, models.Post{})
+	g.ApplyInterface(func(Querier) {}, model.User{}, model.Post{})
 
 	// Generate the code
 	g.Execute()
