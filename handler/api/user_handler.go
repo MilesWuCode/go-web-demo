@@ -19,10 +19,10 @@ type UserResponse struct {
 
 // Pagination 用於定義分頁資訊的結構
 type Pagination struct {
-	CurrentPage  int   `json:"currentPage"`
-	PageSize     int   `json:"pageSize"`
-	TotalRecords int64 `json:"totalRecords"`
-	TotalPages   int   `json:"totalPages"`
+	CurrentPage  int   `json:"current_page"`
+	PageSize     int   `json:"page_size"`
+	TotalRecords int64 `json:"total_records"`
+	TotalPages   int   `json:"total_pages"`
 }
 
 // PaginatedUserResponse 是包含分頁資訊的使用者列表回應結構
