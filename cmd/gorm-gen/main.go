@@ -10,7 +10,19 @@ import (
 )
 
 // Dynamic SQL
-type Querier interface {
+// 註解不能刪
+type UserQuerier interface {
+	// SELECT * FROM @@table WHERE id = @id
+	FindById(id uint) (model.User, error)
+	// SELECT * FROM @@table WHERE name = @name
+	FindByName(name string) (model.User, error)
+}
+
+type PostQuerier interface {
+	// SELECT * FROM @@table WHERE id = @id
+	FindById(id uint) (model.User, error)
+	// SELECT * FROM @@table WHERE title = @title
+	FindByTitle(title string) (model.Post, error)
 }
 
 func main() {
@@ -44,9 +56,11 @@ func main() {
 
 	// Generate basic type-safe DAO API for struct `model.User` following conventions
 	g.ApplyBasic(model.User{})
+	g.ApplyBasic(model.Post{})
 
 	// Generate Type Safe API with Dynamic SQL defined on Querier interface for `model.User` and `model.Company`
-	g.ApplyInterface(func(Querier) {}, model.User{}, model.Post{})
+	g.ApplyInterface(func(UserQuerier) {}, model.User{})
+	g.ApplyInterface(func(PostQuerier) {}, model.Post{})
 
 	// Generate the code
 	g.Execute()

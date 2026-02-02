@@ -67,3 +67,31 @@ func (h *APIHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 
 	h.App.WriteJSON(w, http.StatusOK, userResponse)
 }
+
+// GetUserByName 處理 GET /api/username/{name} 請求
+func (h *APIHandler) GetUserByName(w http.ResponseWriter, r *http.Request) {
+	name := r.PathValue("name")
+	if name == "" {
+		h.App.ErrorJSON(w, errors.New("invalid user name"), http.StatusBadRequest)
+		return
+	}
+
+	q := query.Use(h.App.DB)
+	user, err := q.User.WithContext(r.Context()).FindByName(name)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			h.App.ErrorJSON(w, errors.New("user not found"), http.StatusNotFound)
+		} else {
+			h.App.ErrorJSON(w, err, http.StatusInternalServerError)
+		}
+		return
+	}
+
+	userResponse := UserResponse{
+		ID:    user.ID,
+		Name:  user.Name,
+		Email: user.Email,
+	}
+
+	h.App.WriteJSON(w, http.StatusOK, userResponse)
+}

@@ -24,6 +24,7 @@ func NewRouter(app *server.Application) *http.ServeMux {
 	mux.HandleFunc("/api/echo", apiHandler.EchoHandler)
 	mux.HandleFunc("GET /api/users", apiHandler.GetAllUsers)
 	mux.HandleFunc("GET /api/users/{id}", apiHandler.GetUserByID)
+	mux.HandleFunc("GET /api/username/{name}", apiHandler.GetUserByName)
 
 	// 註冊頁面路由
 	mux.HandleFunc("/about", webHandler.AboutHandler)
