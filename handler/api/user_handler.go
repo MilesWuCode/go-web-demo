@@ -4,7 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
-	"web-demo/model"
+	"web-demo/generated/query"
 
 	"gorm.io/gorm"
 )
@@ -18,9 +18,9 @@ type UserResponse struct {
 
 // GetAllUsers 處理 GET /api/users 請求
 func (h *APIHandler) GetAllUsers(w http.ResponseWriter, r *http.Request) {
-	var users []model.User
-	// 使用 WithContext 傳遞請求的 context
-	if err := h.App.DB.WithContext(r.Context()).Model(&model.User{}).Find(&users).Error; err != nil {
+	q := query.Use(h.App.DB)
+	users, err := q.User.WithContext(r.Context()).Find()
+	if err != nil {
 		h.App.ErrorJSON(w, err, http.StatusInternalServerError)
 		return
 	}
@@ -46,9 +46,9 @@ func (h *APIHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var user model.User
-	// 使用 WithContext 傳遞請求的 context
-	err = h.App.DB.WithContext(r.Context()).First(&user, id).Error
+	q := query.Use(h.App.DB)
+	u := q.User
+	user, err := u.WithContext(r.Context()).Where(u.ID.Eq(uint(id))).First()
 	if err != nil {
 		// 判斷是否為「找不到紀錄」的特定錯誤
 		if errors.Is(err, gorm.ErrRecordNotFound) {
