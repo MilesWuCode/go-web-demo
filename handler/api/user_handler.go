@@ -2,10 +2,10 @@ package api
 
 import (
 	"errors"
-	"math"
 	"net/http"
 	"strconv"
 	"web-demo/generated/query"
+	"web-demo/util"
 
 	"gorm.io/gorm"
 )
@@ -17,18 +17,10 @@ type UserResponse struct {
 	Email string `json:"email"`
 }
 
-// Pagination 用於定義分頁資訊的結構
-type Pagination struct {
-	CurrentPage  int   `json:"current_page"`
-	PageSize     int   `json:"page_size"`
-	TotalRecords int64 `json:"total_records"`
-	TotalPages   int   `json:"total_pages"`
-}
-
 // PaginatedUserResponse 是包含分頁資訊的使用者列表回應結構
 type PaginatedUserResponse struct {
-	Data       []UserResponse `json:"data"`
-	Pagination Pagination     `json:"pagination"`
+	Data       []UserResponse  `json:"data"`
+	Pagination util.Pagination `json:"pagination"`
 }
 
 // GetAllUsers 處理 GET /api/users 請求，並支援分頁
@@ -67,13 +59,8 @@ func (h *APIHandler) GetAllUsers(w http.ResponseWriter, r *http.Request) {
 
 	// --- 組合分頁回應 ---
 	paginatedResponse := PaginatedUserResponse{
-		Data: userResponses,
-		Pagination: Pagination{
-			CurrentPage:  page,
-			PageSize:     pageSize,
-			TotalRecords: totalRecords,
-			TotalPages:   int(math.Ceil(float64(totalRecords) / float64(pageSize))),
-		},
+		Data:       userResponses,
+		Pagination: util.NewPagination(page, pageSize, totalRecords),
 	}
 
 	// 回傳 JSON 資料
