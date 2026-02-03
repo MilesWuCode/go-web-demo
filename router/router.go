@@ -1,33 +1,54 @@
 package router
 
 import (
+	"errors"
 	"net/http"
+	"strings"
 	"web-demo/handler/api"
 	"web-demo/handler/web"
 	"web-demo/server"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 )
 
-// NewRouter 現在接收 Application 實例，並註冊其上的方法作為 Handler
-func NewRouter(app *server.Application) *http.ServeMux {
-	mux := http.NewServeMux()
+// NewRouter 使用 chi 路由器並回傳一個 http.Handler 介面。
+func NewRouter(app *server.Application) http.Handler {
+	mux := chi.NewRouter()
 
-	// 註冊靜態檔案伺服器
-	dir := http.Dir("./public")
-	fileServer := http.FileServer(dir)
-	mux.Handle("/static/", http.StripPrefix("/static/", fileServer))
+	// 使用 chi 內建的中介軟體
+	mux.Use(middleware.Logger)    // 記錄請求日誌
+	mux.Use(middleware.Recoverer) // 從 panic 中恢復
 
-	// 建立 handler 實例
+	// 建立處理器實例
 	apiHandler := api.NewAPIHandler(app)
 	webHandler := web.NewWebHandler(app)
 
-	// 註冊 API 路由
-	mux.HandleFunc("GET /api/users", apiHandler.GetAllUsers)
-	mux.HandleFunc("GET /api/users/{id}", apiHandler.GetUserByID)
-	mux.HandleFunc("GET /api/username/{name}", apiHandler.GetUserByName)
+	// 註冊靜態檔案伺服器
+	fileServer := http.FileServer(http.Dir("./public"))
+	// chi 建議使用 Mount 來處理靜態檔案，並移除路徑前綴。
+	mux.Mount("/static", http.StripPrefix("/static/", fileServer))
 
-	// 註冊頁面路由
-	mux.HandleFunc("/about", webHandler.AboutHandler)
-	mux.HandleFunc("/", webHandler.HomeHandler)
+	// API 路由群組
+	mux.Route("/api", func(r chi.Router) {
+		r.Get("/users", apiHandler.GetAllUsers)
+		r.Get("/users/{id}", apiHandler.GetUserByID)
+		r.Get("/username/{name}", apiHandler.GetUserByName)
+	})
+
+	// 網頁路由
+	mux.Get("/about", webHandler.AboutHandler)
+	mux.Get("/", webHandler.HomeHandler)
+
+	// 自訂 404 處理器
+	mux.NotFound(func(w http.ResponseWriter, r *http.Request) {
+		// 根據路徑前綴判斷是 API 請求還是網頁請求，並回傳對應的 404 錯誤。
+		if strings.HasPrefix(r.URL.Path, "/api/") {
+			app.ErrorJSON(w, errors.New("resource not found"), http.StatusNotFound)
+		} else {
+			webHandler.NotFoundHandler(w, r)
+		}
+	})
 
 	return mux
 }

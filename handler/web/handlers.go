@@ -2,7 +2,6 @@ package web
 
 import (
 	"net/http"
-	"strings"
 	"web-demo/server"
 )
 
@@ -17,16 +16,6 @@ func NewWebHandler(app *server.Application) *WebHandler {
 // --- Page Handlers ---
 
 func (h *WebHandler) HomeHandler(w http.ResponseWriter, r *http.Request) {
-	if strings.HasPrefix(r.URL.Path, "/api/") {
-		http.NotFound(w, r)
-		return
-	}
-
-	if r.URL.Path != "/" {
-		h.NotFoundHandler(w, r)
-		return
-	}
-
 	h.Render(w, http.StatusOK, "index.html")
 }
 
