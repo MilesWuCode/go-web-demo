@@ -23,6 +23,7 @@ func NewRouter(app *server.Application) http.Handler {
 	// 建立處理器實例
 	apiHandler := api.NewAPIHandler(app)
 	webHandler := web.NewWebHandler(app)
+	authHandler := api.NewAuthHandler(app) // 新增 AuthHandler 實例
 
 	// 註冊靜態檔案伺服器
 	fileServer := http.FileServer(http.Dir("./public"))
@@ -34,6 +35,11 @@ func NewRouter(app *server.Application) http.Handler {
 		r.Get("/users", apiHandler.GetAllUsers)
 		r.Get("/users/{id}", apiHandler.GetUserByID)
 		r.Get("/username/{name}", apiHandler.GetUserByName)
+
+		// 認證相關路由
+		r.Post("/auth/register", authHandler.Register) // 註冊路由
+		r.Post("/auth/login", authHandler.Login)       // 登入路由
+		r.Post("/auth/logout", authHandler.Logout)     // 登出路由
 	})
 
 	// 網頁路由

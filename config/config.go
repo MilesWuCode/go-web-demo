@@ -10,10 +10,12 @@ import (
 
 // AppConfig 定義應用程式的所有設定參數
 type AppConfig struct {
-	AppName    string
-	UploadPath string
-	Port       string
-	DBPath     string
+	AppName      string
+	UploadPath   string
+	Port         string
+	DBPath       string
+	JWTSecret    string
+	JWTExpiresIn int // In minutes
 }
 
 var (
@@ -33,10 +35,12 @@ func Get() *AppConfig {
 
 		// 載入設定並將其賦值給套件級別的 instance 變數
 		instance = &AppConfig{
-			AppName:    "Go Web Demo Application",
-			UploadPath: "./uploads",
-			DBPath:     "db.sqlite",
-			Port:       getEnv("PORT", "3000"),
+			AppName:      "Go Web Demo Application",
+			UploadPath:   "./uploads",
+			DBPath:       "db.sqlite",
+			Port:         getEnv("PORT", "3000"),
+			JWTSecret:    getEnv("JWT_SECRET", "super-secret-jwt-key"),
+			JWTExpiresIn: 60, // Default to 60 minutes
 		}
 	})
 	return instance
