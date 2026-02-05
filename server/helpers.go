@@ -2,7 +2,6 @@ package server
 
 import (
 	"encoding/json"
-	"errors"
 	"log"
 	"net/http"
 	"strconv"
@@ -50,8 +49,6 @@ func (app *Application) ErrorJSON(w http.ResponseWriter, err error, status int) 
 
 	app.WriteJSON(w, status, errorResponse)
 }
-
-
 
 // ParseRequestForm 是一個輔助函式，用於解析來自請求主體的表單資料。
 // 它會自動解析 application/x-www-form-urlencoded 和 multipart/form-data。

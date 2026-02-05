@@ -33,7 +33,7 @@
   - 驗證傳入的表單
   - 資料庫中檢查是否曾經註冊
   - 比對身份
-  - 授權
+  - JWT授權功能
 
 - 製作登出
 - 格式
@@ -42,8 +42,9 @@
     - Content-Type: application/x-www-form-urlencoded 或 multipart/form-data
     - body (表單欄位)
       - token
-- 驗證傳入的表單
-- 清除授權
+  - 中間層驗證JWT功能
+  - 驗證傳入的表單
+  - 清除授權
 
 - 製作第三方登入
   - Google登入

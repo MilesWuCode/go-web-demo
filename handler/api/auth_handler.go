@@ -3,11 +3,15 @@ package api
 import (
 	"errors"
 	"net/http"
+	"reflect"
 	"time"
 	"web-demo/model"
 	"web-demo/server"
 
+	"github.com/go-playground/locales/zh_Hant_TW"
+	ut "github.com/go-playground/universal-translator"
 	"github.com/go-playground/validator/v10"
+	zh_translations "github.com/go-playground/validator/v10/translations/zh_tw"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -15,15 +19,21 @@ import (
 
 // RegisterRequest 定義了使用者註冊時預期的請求資料格式。
 type RegisterRequest struct {
-	Name     string `json:"name" validate:"required,min=3,max=50"`
-	Email    string `json:"email" validate:"required,email"`
-	Password string `json:"password" validate:"required,min=6"`
+	Name     string `json:"name" validate:"required,min=3,max=50" label:"姓名"`
+	Email    string `json:"email" validate:"required,email" label:"信箱"`
+	Password string `json:"password" validate:"required,min=6" label:"密碼"`
 }
 
 // LoginRequest 定義了使用者登入時預期的請求資料格式。
 type LoginRequest struct {
 	Email    string `json:"email" validate:"required,email"`
 	Password string `json:"password" validate:"required,min=6"`
+}
+
+var customMessages = map[string]string{
+	"required": "此欄位為必填",
+	"email":    "請輸入有效的電子郵件格式",
+	"min":      "長度不足",
 }
 
 // AuthHandler 結構體，用於處理認證相關的 API 請求
@@ -54,11 +64,25 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 	// 驗證請求資料
 	validate := validator.New()
+	validate.RegisterTagNameFunc(func(fld reflect.StructField) string {
+		// 優先使用 label tag
+		if name := fld.Tag.Get("label"); name != "" {
+			return name
+		}
+
+		return fld.Name
+	})
+	zhTW := zh_Hant_TW.New()
+	uni := ut.New(zhTW, zhTW)
+	trans, _ := uni.GetTranslator("zh_Hant_TW")
+	zh_translations.RegisterDefaultTranslations(validate, trans)
 	err = validate.Struct(input)
 	if err != nil {
 		validationErrors := make(map[string]string)
 		for _, err := range err.(validator.ValidationErrors) {
-			validationErrors[err.Field()] = err.Tag()
+			// validationErrors[err.Field()] = err.Tag()
+			// validationErrors[err.Field()] = customMessages[err.Tag()]
+			validationErrors[err.Field()] = err.Translate(trans)
 		}
 
 		h.App.WriteJSON(w, http.StatusUnprocessableEntity, validationErrors)
