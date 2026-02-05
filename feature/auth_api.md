@@ -13,7 +13,8 @@
   - /api/auth/register
   - 格式
     - method post
-    - body
+    - Content-Type: application/x-www-form-urlencoded 或 multipart/form-data
+    - body (表單欄位)
       - name
       - email
       - password
@@ -25,7 +26,8 @@
   - /api/auth/login
   - 格式
     - method post
-    - body
+    - Content-Type: application/x-www-form-urlencoded 或 multipart/form-data
+    - body (表單欄位)
       - email
       - password
   - 驗證傳入的表單
@@ -37,7 +39,8 @@
 - 格式
   - /api/auth/logout
     - method post
-    - body
+    - Content-Type: application/x-www-form-urlencoded 或 multipart/form-data
+    - body (表單欄位)
       - token
 - 驗證傳入的表單
 - 清除授權

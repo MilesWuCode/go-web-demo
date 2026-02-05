@@ -8,9 +8,9 @@ import (
 	"web-demo/server"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
-	"github.com/golang-jwt/jwt/v5"
 )
 
 // RegisterRequest 定義了使用者註冊時預期的請求資料格式。
@@ -41,11 +41,16 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var input RegisterRequest
 
 	// 解析請求主體
-	err := h.App.ReadJSON(w, r, &input)
+	err := h.App.ParseRequestForm(w, r)
 	if err != nil {
 		h.App.ErrorJSON(w, err, http.StatusBadRequest)
 		return
 	}
+
+	// Manually populate input from form values
+	input.Name = r.PostForm.Get("name")
+	input.Email = r.PostForm.Get("email")
+	input.Password = r.PostForm.Get("password")
 
 	// 驗證請求資料
 	validate := validator.New()
@@ -55,7 +60,8 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		for _, err := range err.(validator.ValidationErrors) {
 			validationErrors[err.Field()] = err.Tag()
 		}
-		h.App.ErrorJSON(w, validationErrors, http.StatusBadRequest)
+
+		h.App.WriteJSON(w, http.StatusUnprocessableEntity, validationErrors)
 		return
 	}
 
@@ -108,11 +114,15 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var input LoginRequest
 
 	// 解析請求主體
-	err := h.App.ReadJSON(w, r, &input)
+	err := h.App.ParseRequestForm(w, r)
 	if err != nil {
 		h.App.ErrorJSON(w, err, http.StatusBadRequest)
 		return
 	}
+
+	// Manually populate input from form values
+	input.Email = r.PostForm.Get("email")
+	input.Password = r.PostForm.Get("password")
 
 	// 驗證請求資料
 	validate := validator.New()
@@ -122,7 +132,8 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		for _, err := range err.(validator.ValidationErrors) {
 			validationErrors[err.Field()] = err.Tag()
 		}
-		h.App.ErrorJSON(w, validationErrors, http.StatusBadRequest)
+
+		h.App.WriteJSON(w, http.StatusUnprocessableEntity, validationErrors)
 		return
 	}
 
@@ -189,11 +200,14 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	var input LogoutRequest
 
 	// 解析請求主體
-	err := h.App.ReadJSON(w, r, &input)
+	err := h.App.ParseRequestForm(w, r)
 	if err != nil {
 		h.App.ErrorJSON(w, err, http.StatusBadRequest)
 		return
 	}
+
+	// Manually populate input from form values
+	input.Token = r.PostForm.Get("token")
 
 	// 驗證 token 是否存在 (不需要進一步驗證有效性，因為假設客戶端處理銷毀)
 	validate := validator.New()
@@ -203,7 +217,7 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 		for _, err := range err.(validator.ValidationErrors) {
 			validationErrors[err.Field()] = err.Tag()
 		}
-		h.App.ErrorJSON(w, validationErrors, http.StatusBadRequest)
+		h.App.WriteJSON(w, http.StatusUnprocessableEntity, validationErrors)
 		return
 	}
 
@@ -213,4 +227,3 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 		"message": "登出成功",
 	})
 }
-

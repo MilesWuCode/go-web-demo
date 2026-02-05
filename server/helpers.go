@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"strconv"
@@ -48,4 +49,19 @@ func (app *Application) ErrorJSON(w http.ResponseWriter, err error, status int) 
 	}
 
 	app.WriteJSON(w, status, errorResponse)
+}
+
+
+
+// ParseRequestForm 是一個輔助函式，用於解析來自請求主體的表單資料。
+// 它會自動解析 application/x-www-form-urlencoded 和 multipart/form-data。
+func (app *Application) ParseRequestForm(w http.ResponseWriter, r *http.Request) error {
+	// Default max memory for ParseMultipartForm is 32MB. Can be configured if needed.
+	// ParseForm handles both application/x-www-form-urlencoded and multipart/form-data
+	// for POST, PUT, and PATCH requests. For GET, it parses the URL query string.
+	err := r.ParseForm()
+	if err != nil {
+		return err
+	}
+	return nil
 }
