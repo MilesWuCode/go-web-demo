@@ -2,7 +2,6 @@ package model
 
 import (
 	"gorm.io/gorm"
-	"time"
 )
 
 // User 模型對應到資料庫中的 'users' 資料表
@@ -11,7 +10,5 @@ type User struct {
 	Name       string `gorm:"unique"`
 	Email      string `gorm:"unique"`
 	Password   string // 儲存密碼 (注意：應儲存雜湊值而非明文)
-	RefreshToken string
-	RefreshTokenExpiry time.Time
 	Posts      []Post // 一對多關聯：一個使用者可以有多個 Post
 }

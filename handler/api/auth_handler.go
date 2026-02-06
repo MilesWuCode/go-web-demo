@@ -4,9 +4,13 @@ import (
 	"errors"
 	"net/http"
 	"reflect"
+	"strings"
 	"time"
 	"web-demo/model"
 	"web-demo/server"
+
+	"crypto/rand"
+	"encoding/base64"
 
 	"github.com/go-playground/locales/zh_Hant_TW"
 	ut "github.com/go-playground/universal-translator"
@@ -15,8 +19,6 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
-	"crypto/rand"
-	"encoding/base64"
 )
 
 // RegisterRequest 定義了使用者註冊時預期的請求資料格式。
@@ -208,24 +210,27 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	refreshTokenExpiry := time.Now().Add(time.Minute * time.Duration(h.App.Config.JWTRefreshExpiresIn))
 
-	user.RefreshToken = refreshToken
-	user.RefreshTokenExpiry = refreshTokenExpiry
-
-	if result := h.App.DB.Save(&user); result.Error != nil {
+	// 建立 Refresh Token 紀錄到獨立資料表
+	rt := model.RefreshToken{
+		UserID:    user.ID,
+		Token:     refreshToken,
+		ExpiresAt: refreshTokenExpiry,
+	}
+	if result := h.App.DB.Create(&rt); result.Error != nil {
 		h.App.ErrorJSON(w, result.Error, http.StatusInternalServerError)
 		return
 	}
 
 	h.App.WriteJSON(w, http.StatusOK, map[string]interface{}{
-		"message":      "登入成功",
-		"token":        token,
-		"refresh_token": refreshToken,
-		"refresh_token_expires_in": h.App.Config.JWTRefreshExpiresIn * 60, // Convert minutes to seconds
+		"message": "登入成功",
 		"user": UserResponse{
 			ID:    user.ID,
 			Name:  user.Name,
 			Email: user.Email,
 		},
+		"token":                    token,
+		"refresh_token":            refreshToken,
+		"refresh_token_expires_in": h.App.Config.JWTRefreshExpiresIn * 60, // Convert minutes to seconds
 	})
 }
 
@@ -248,11 +253,6 @@ func (h *AuthHandler) generateToken(user *model.User) (string, error) {
 // LogoutRequest 定義了使用者登出時預期的請求資料格式。
 type LogoutRequest struct {
 	Token string `json:"token" validate:"required"`
-}
-
-// RefreshRequest 定義了換新權杖時預期的請求資料格式
-type RefreshRequest struct {
-	RefreshToken string `json:"refresh_token" validate:"required"`
 }
 
 // Logout 處理使用者登出請求
@@ -281,8 +281,13 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 這裡僅回傳成功訊息，實際的 token 清除由客戶端處理。
-	// 若要實作伺服器端 token 無效化 (例如 JWT 黑名單)，則需更複雜的機制。
+	// 清除授權：刪除指定的 Refresh Token
+	// 這裡假設傳入的 token 是要被撤銷的 refresh token
+	if err := h.App.DB.Where("token = ?", input.Token).Delete(&model.RefreshToken{}).Error; err != nil {
+		h.App.ErrorJSON(w, err, http.StatusInternalServerError)
+		return
+	}
+
 	h.App.WriteJSON(w, http.StatusOK, map[string]string{
 		"message": "登出成功",
 	})
@@ -290,40 +295,40 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 
 // Refresh 處理換新權杖請求
 func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
-	var input RefreshRequest
-
-	err := h.App.ParseRequestForm(w, r)
-	if err != nil {
-		h.App.ErrorJSON(w, err, http.StatusBadRequest)
+	// 從 Header 讀取 Refresh Token (Authorization: Bearer <token>)
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		h.App.ErrorJSON(w, errors.New("missing authorization header"), http.StatusUnauthorized)
 		return
 	}
 
-	input.RefreshToken = r.PostForm.Get("refresh_token")
-
-	validate := validator.New()
-	err = validate.Struct(input)
-	if err != nil {
-		validationErrors := make(map[string]string)
-		for _, err := range err.(validator.ValidationErrors) {
-			validationErrors[err.Field()] = err.Tag()
-		}
-		h.App.WriteJSON(w, http.StatusUnprocessableEntity, validationErrors)
+	parts := strings.Split(authHeader, " ")
+	if len(parts) != 2 || parts[0] != "Bearer" {
+		h.App.ErrorJSON(w, errors.New("invalid authorization header"), http.StatusUnauthorized)
 		return
 	}
+	refreshToken := parts[1]
 
-	var user model.User
-	result := h.App.DB.Where("refresh_token = ?", input.RefreshToken).First(&user)
+	// 查詢 Refresh Token 是否存在
+	var tokenRecord model.RefreshToken
+	result := h.App.DB.Where("token = ?", refreshToken).First(&tokenRecord)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		h.App.ErrorJSON(w, errors.New("無效的換新權杖"), http.StatusUnauthorized)
 		return
 	}
-	if result.Error != nil {
-		h.App.ErrorJSON(w, result.Error, http.StatusInternalServerError)
+
+	// 檢查是否過期
+	if tokenRecord.ExpiresAt.Before(time.Now()) {
+		// 可以選擇在此刪除過期的 token
+		h.App.DB.Delete(&tokenRecord)
+		h.App.ErrorJSON(w, errors.New("換新權杖已過期"), http.StatusUnauthorized)
 		return
 	}
 
-	if user.RefreshTokenExpiry.Before(time.Now()) {
-		h.App.ErrorJSON(w, errors.New("換新權杖已過期"), http.StatusUnauthorized)
+	// 查詢關聯的使用者
+	var user model.User
+	if err := h.App.DB.First(&user, tokenRecord.UserID).Error; err != nil {
+		h.App.ErrorJSON(w, errors.New("user not found"), http.StatusUnauthorized)
 		return
 	}
 
@@ -343,18 +348,24 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 
 	newRefreshTokenExpiry := time.Now().Add(time.Minute * time.Duration(h.App.Config.JWTRefreshExpiresIn))
 
-	user.RefreshToken = newRefreshToken
-	user.RefreshTokenExpiry = newRefreshTokenExpiry
+	// 刪除舊的 Refresh Token (Rotation 機制)
+	h.App.DB.Delete(&tokenRecord)
 
-	if result := h.App.DB.Save(&user); result.Error != nil {
+	// 儲存新的 Refresh Token
+	newRt := model.RefreshToken{
+		UserID:    user.ID,
+		Token:     newRefreshToken,
+		ExpiresAt: newRefreshTokenExpiry,
+	}
+	if result := h.App.DB.Create(&newRt); result.Error != nil {
 		h.App.ErrorJSON(w, result.Error, http.StatusInternalServerError)
 		return
 	}
 
 	h.App.WriteJSON(w, http.StatusOK, map[string]interface{}{
-		"message":      "權杖已更新",
-		"token":        newToken,
-		"refresh_token": newRefreshToken,
+		"message":                  "權杖已更新",
+		"token":                    newToken,
+		"refresh_token":            newRefreshToken,
 		"refresh_token_expires_in": h.App.Config.JWTRefreshExpiresIn * 60,
 	})
 }

@@ -9,8 +9,5 @@ run:
 build:
 	go build -o web-demo
 
-migrate:
-	~/go/bin/gorm gen -i ./ -o ./generated
-
 tidy:
 	go mod tidy

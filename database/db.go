@@ -20,7 +20,7 @@ func NewDB(cfg *config.AppConfig) (*gorm.DB, error) {
 
 	// 自動遷移
 	log.Println("正在執行資料庫遷移...")
-	err = db.AutoMigrate(&model.User{}, &model.Post{})
+	err = db.AutoMigrate(&model.User{}, &model.Post{}, &model.RefreshToken{})
 	if err != nil {
 		return nil, err
 	}
