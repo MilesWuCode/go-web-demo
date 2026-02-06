@@ -43,6 +43,7 @@ func NewRouter(app *server.Application) http.Handler {
 
 		// 登出路由，應用 JWT 驗證中間件
 		r.With(app.AuthMiddleware).Post("/auth/logout", authHandler.Logout)
+		r.With(app.AuthMiddleware).Get("/auth/me", authHandler.Me)
 	})
 
 	// 網頁路由

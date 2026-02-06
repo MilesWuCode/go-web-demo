@@ -316,6 +316,10 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 		h.App.ErrorJSON(w, errors.New("無效的換新權杖"), http.StatusUnauthorized)
 		return
 	}
+	if result.Error != nil {
+		h.App.ErrorJSON(w, result.Error, http.StatusInternalServerError)
+		return
+	}
 
 	// 檢查是否過期
 	if tokenRecord.ExpiresAt.Before(time.Now()) {
@@ -328,7 +332,11 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	// 查詢關聯的使用者
 	var user model.User
 	if err := h.App.DB.First(&user, tokenRecord.UserID).Error; err != nil {
-		h.App.ErrorJSON(w, errors.New("user not found"), http.StatusUnauthorized)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			h.App.ErrorJSON(w, errors.New("user not found"), http.StatusUnauthorized)
+		} else {
+			h.App.ErrorJSON(w, err, http.StatusInternalServerError)
+		}
 		return
 	}
 
@@ -349,7 +357,10 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	newRefreshTokenExpiry := time.Now().Add(time.Minute * time.Duration(h.App.Config.JWTRefreshExpiresIn))
 
 	// 刪除舊的 Refresh Token (Rotation 機制)
-	h.App.DB.Delete(&tokenRecord)
+	if err := h.App.DB.Delete(&tokenRecord).Error; err != nil {
+		h.App.ErrorJSON(w, err, http.StatusInternalServerError)
+		return
+	}
 
 	// 儲存新的 Refresh Token
 	newRt := model.RefreshToken{
@@ -367,5 +378,66 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 		"token":                    newToken,
 		"refresh_token":            newRefreshToken,
 		"refresh_token_expires_in": h.App.Config.JWTRefreshExpiresIn * 60,
+	})
+}
+
+// Me 處理取得個人資料請求
+func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
+	// 從 Header 讀取 Access Token
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		h.App.ErrorJSON(w, errors.New("missing authorization header"), http.StatusUnauthorized)
+		return
+	}
+
+	parts := strings.Split(authHeader, " ")
+	if len(parts) != 2 || parts[0] != "Bearer" {
+		h.App.ErrorJSON(w, errors.New("invalid authorization header"), http.StatusUnauthorized)
+		return
+	}
+	tokenString := parts[1]
+
+	// 解析 Token
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.New("unexpected signing method")
+		}
+		return []byte(h.App.Config.JWTSecret), nil
+	})
+
+	if err != nil || !token.Valid {
+		h.App.ErrorJSON(w, errors.New("invalid token"), http.StatusUnauthorized)
+		return
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		h.App.ErrorJSON(w, errors.New("invalid token claims"), http.StatusUnauthorized)
+		return
+	}
+
+	// 取得 user_id
+	userIDFloat, ok := claims["user_id"].(float64)
+	if !ok {
+		h.App.ErrorJSON(w, errors.New("invalid user_id in token"), http.StatusUnauthorized)
+		return
+	}
+	userID := uint(userIDFloat)
+
+	// 查詢使用者
+	var user model.User
+	if err := h.App.DB.First(&user, userID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			h.App.ErrorJSON(w, errors.New("user not found"), http.StatusNotFound)
+		} else {
+			h.App.ErrorJSON(w, err, http.StatusInternalServerError)
+		}
+		return
+	}
+
+	h.App.WriteJSON(w, http.StatusOK, UserResponse{
+		ID:    user.ID,
+		Name:  user.Name,
+		Email: user.Email,
 	})
 }

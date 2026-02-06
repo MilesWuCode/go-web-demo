@@ -47,6 +47,13 @@
     - access_token 有效期限1小時
     - refresh_token 有效期限7天
 
+- 製作取得個人資料
+  - /api/auth/me
+  - 格式
+    - method get
+    - header Authorization: Bearer access_token
+  - 中間層驗證JWT功能
+
 - 製作RefreshToken
   - /api/auth/refresh-token
   - 格式
