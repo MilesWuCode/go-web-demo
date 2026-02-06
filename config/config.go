@@ -3,6 +3,7 @@ package config
 import (
 	"log"
 	"os"
+	"strconv" // 新增導入
 	"sync"
 
 	"github.com/joho/godotenv"
@@ -10,12 +11,13 @@ import (
 
 // AppConfig 定義應用程式的所有設定參數
 type AppConfig struct {
-	AppName      string
-	UploadPath   string
-	Port         string
-	DBPath       string
-	JWTSecret    string
-	JWTExpiresIn int // In minutes
+	AppName             string
+	UploadPath          string
+	Port                string
+	DBPath              string
+	JWTSecret           string
+	JWTExpiresIn        int // In minutes
+	JWTRefreshExpiresIn int // In minutes
 }
 
 var (
@@ -35,12 +37,13 @@ func Get() *AppConfig {
 
 		// 載入設定並將其賦值給套件級別的 instance 變數
 		instance = &AppConfig{
-			AppName:      "Go Web Demo Application",
-			UploadPath:   "./uploads",
-			DBPath:       "db.sqlite",
-			Port:         getEnv("PORT", "3000"),
-			JWTSecret:    getEnv("JWT_SECRET", "super-secret-jwt-key"),
-			JWTExpiresIn: 60, // Default to 60 minutes
+			AppName:             "Go Web Demo Application",
+			UploadPath:          "./uploads",
+			DBPath:              "db.sqlite",
+			Port:                getEnv("PORT", "3000"),
+			JWTSecret:           getEnv("JWT_SECRET", "super-secret-jwt-key"),
+			JWTExpiresIn:        getIntEnv("JWT_EXPIRES_IN", 60),              // Default to 60 minutes
+			JWTRefreshExpiresIn: getIntEnv("JWT_REFRESH_EXPIRES_IN", 7*24*60), // Default to 7 days (in minutes)
 		}
 	})
 	return instance
@@ -50,6 +53,16 @@ func Get() *AppConfig {
 func getEnv(key, fallback string) string {
 	if value, exists := os.LookupEnv(key); exists {
 		return value
+	}
+	return fallback
+}
+
+// getIntEnv 讀取環境變數並轉換為 int，若不存在則回傳預設值
+func getIntEnv(key string, fallback int) int {
+	if value, exists := os.LookupEnv(key); exists {
+		if intValue, err := strconv.Atoi(value); err == nil {
+			return intValue
+		}
 	}
 	return fallback
 }

@@ -9,6 +9,16 @@
 
 ## 目標
 
+- 規格
+  - 資料庫 users 資料表
+    - 帳號：email
+    - 密碼：password
+    - 一對多關聯表 refresh_tokens
+  - 資料庫 refresh_tokens 資料表
+    - user_id
+    - token
+    - expired_at
+
 - 製作註冊
   - /api/auth/register
   - 格式
@@ -33,7 +43,19 @@
   - 驗證傳入的表單
   - 資料庫中檢查是否曾經註冊
   - 比對身份
-  - JWT授權功能
+  - 生成JWT授權
+    - access_token 有效期限1小時
+    - refresh_token 有效期限7天
+
+- 製作RefreshToken
+  - /api/auth/refresh-token
+  - 格式
+    - method post
+    - header Authorization: Bearer refresh_token
+  - 查詢資料庫 refresh_tokens 資料表 是否存在該refresh_token
+  - 生成JWT授權
+    - access_token 有效期限1小時
+    - refresh_token 有效期限7天
 
 - 製作登出
 - 格式

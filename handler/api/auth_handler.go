@@ -15,6 +15,8 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
+	"crypto/rand"
+	"encoding/base64"
 )
 
 // RegisterRequest 定義了使用者註冊時預期的請求資料格式。
@@ -44,6 +46,16 @@ type AuthHandler struct {
 // NewAuthHandler 建立並回傳一個新的 AuthHandler 實例
 func NewAuthHandler(app *server.Application) *AuthHandler {
 	return &AuthHandler{App: app}
+}
+
+// generateRefreshToken 生成一個安全的隨機字串作為換新權杖
+func generateRefreshToken() (string, error) {
+	b := make([]byte, 32) // 32 bytes = 256 bits
+	_, err := rand.Read(b)
+	if err != nil {
+		return "", err
+	}
+	return base64.URLEncoding.EncodeToString(b), nil
 }
 
 // Register 處理使用者註冊請求
@@ -187,9 +199,28 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 產生並儲存 Refresh Token
+	refreshToken, err := generateRefreshToken()
+	if err != nil {
+		h.App.ErrorJSON(w, errors.New("無法產生換新 token"), http.StatusInternalServerError)
+		return
+	}
+
+	refreshTokenExpiry := time.Now().Add(time.Minute * time.Duration(h.App.Config.JWTRefreshExpiresIn))
+
+	user.RefreshToken = refreshToken
+	user.RefreshTokenExpiry = refreshTokenExpiry
+
+	if result := h.App.DB.Save(&user); result.Error != nil {
+		h.App.ErrorJSON(w, result.Error, http.StatusInternalServerError)
+		return
+	}
+
 	h.App.WriteJSON(w, http.StatusOK, map[string]interface{}{
-		"message": "登入成功",
-		"token":   token,
+		"message":      "登入成功",
+		"token":        token,
+		"refresh_token": refreshToken,
+		"refresh_token_expires_in": h.App.Config.JWTRefreshExpiresIn * 60, // Convert minutes to seconds
 		"user": UserResponse{
 			ID:    user.ID,
 			Name:  user.Name,
@@ -217,6 +248,11 @@ func (h *AuthHandler) generateToken(user *model.User) (string, error) {
 // LogoutRequest 定義了使用者登出時預期的請求資料格式。
 type LogoutRequest struct {
 	Token string `json:"token" validate:"required"`
+}
+
+// RefreshRequest 定義了換新權杖時預期的請求資料格式
+type RefreshRequest struct {
+	RefreshToken string `json:"refresh_token" validate:"required"`
 }
 
 // Logout 處理使用者登出請求
@@ -249,5 +285,76 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	// 若要實作伺服器端 token 無效化 (例如 JWT 黑名單)，則需更複雜的機制。
 	h.App.WriteJSON(w, http.StatusOK, map[string]string{
 		"message": "登出成功",
+	})
+}
+
+// Refresh 處理換新權杖請求
+func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
+	var input RefreshRequest
+
+	err := h.App.ParseRequestForm(w, r)
+	if err != nil {
+		h.App.ErrorJSON(w, err, http.StatusBadRequest)
+		return
+	}
+
+	input.RefreshToken = r.PostForm.Get("refresh_token")
+
+	validate := validator.New()
+	err = validate.Struct(input)
+	if err != nil {
+		validationErrors := make(map[string]string)
+		for _, err := range err.(validator.ValidationErrors) {
+			validationErrors[err.Field()] = err.Tag()
+		}
+		h.App.WriteJSON(w, http.StatusUnprocessableEntity, validationErrors)
+		return
+	}
+
+	var user model.User
+	result := h.App.DB.Where("refresh_token = ?", input.RefreshToken).First(&user)
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		h.App.ErrorJSON(w, errors.New("無效的換新權杖"), http.StatusUnauthorized)
+		return
+	}
+	if result.Error != nil {
+		h.App.ErrorJSON(w, result.Error, http.StatusInternalServerError)
+		return
+	}
+
+	if user.RefreshTokenExpiry.Before(time.Now()) {
+		h.App.ErrorJSON(w, errors.New("換新權杖已過期"), http.StatusUnauthorized)
+		return
+	}
+
+	// 產生新的 JWT token
+	newToken, err := h.generateToken(&user)
+	if err != nil {
+		h.App.ErrorJSON(w, errors.New("無法產生新的認證 token"), http.StatusInternalServerError)
+		return
+	}
+
+	// 產生並儲存新的 Refresh Token
+	newRefreshToken, err := generateRefreshToken()
+	if err != nil {
+		h.App.ErrorJSON(w, errors.New("無法產生新的換新 token"), http.StatusInternalServerError)
+		return
+	}
+
+	newRefreshTokenExpiry := time.Now().Add(time.Minute * time.Duration(h.App.Config.JWTRefreshExpiresIn))
+
+	user.RefreshToken = newRefreshToken
+	user.RefreshTokenExpiry = newRefreshTokenExpiry
+
+	if result := h.App.DB.Save(&user); result.Error != nil {
+		h.App.ErrorJSON(w, result.Error, http.StatusInternalServerError)
+		return
+	}
+
+	h.App.WriteJSON(w, http.StatusOK, map[string]interface{}{
+		"message":      "權杖已更新",
+		"token":        newToken,
+		"refresh_token": newRefreshToken,
+		"refresh_token_expires_in": h.App.Config.JWTRefreshExpiresIn * 60,
 	})
 }

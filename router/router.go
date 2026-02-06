@@ -39,6 +39,7 @@ func NewRouter(app *server.Application) http.Handler {
 		// 認證相關路由
 		r.Post("/auth/register", authHandler.Register) // 註冊路由
 		r.Post("/auth/login", authHandler.Login)       // 登入路由
+		r.Post("/auth/refresh", authHandler.Refresh)   // 換新權杖路由
 
 		// 登出路由，應用 JWT 驗證中間件
 		r.With(app.AuthMiddleware).Post("/auth/logout", authHandler.Logout)
