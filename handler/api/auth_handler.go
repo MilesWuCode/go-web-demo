@@ -383,46 +383,12 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 
 // Me 處理取得個人資料請求
 func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
-	// 從 Header 讀取 Access Token
-	authHeader := r.Header.Get("Authorization")
-	if authHeader == "" {
-		h.App.ErrorJSON(w, errors.New("missing authorization header"), http.StatusUnauthorized)
-		return
-	}
-
-	parts := strings.Split(authHeader, " ")
-	if len(parts) != 2 || parts[0] != "Bearer" {
-		h.App.ErrorJSON(w, errors.New("invalid authorization header"), http.StatusUnauthorized)
-		return
-	}
-	tokenString := parts[1]
-
-	// 解析 Token
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, errors.New("unexpected signing method")
-		}
-		return []byte(h.App.Config.JWTSecret), nil
-	})
-
-	if err != nil || !token.Valid {
-		h.App.ErrorJSON(w, errors.New("invalid token"), http.StatusUnauthorized)
-		return
-	}
-
-	claims, ok := token.Claims.(jwt.MapClaims)
+	// 從 Context 取得 user_id (由 AuthMiddleware 設定)
+	userID, ok := r.Context().Value(server.UserContextKey).(uint)
 	if !ok {
-		h.App.ErrorJSON(w, errors.New("invalid token claims"), http.StatusUnauthorized)
+		h.App.ErrorJSON(w, errors.New("無法取得使用者資訊"), http.StatusUnauthorized)
 		return
 	}
-
-	// 取得 user_id
-	userIDFloat, ok := claims["user_id"].(float64)
-	if !ok {
-		h.App.ErrorJSON(w, errors.New("invalid user_id in token"), http.StatusUnauthorized)
-		return
-	}
-	userID := uint(userIDFloat)
 
 	// 查詢使用者
 	var user model.User
