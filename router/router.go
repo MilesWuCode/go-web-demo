@@ -23,22 +23,25 @@ func NewRouter(app *server.Application) http.Handler {
 	// 建立處理器實例
 	apiHandler := api.NewAPIHandler(app)
 	webHandler := web.NewWebHandler(app)
-	authHandler := api.NewAuthHandler(app) // 新增 AuthHandler 實例
-
-	// 註冊靜態檔案伺服器
-	fileServer := http.FileServer(http.Dir("./public"))
-	// chi 建議使用 Mount 來處理靜態檔案，並移除路徑前綴。
-	mux.Mount("/static", http.StripPrefix("/static/", fileServer))
-
-	// API 路由群組
-	mux.Route("/api", func(r chi.Router) {
-		r.Get("/users", apiHandler.GetAllUsers)
-		r.Get("/users/{id}", apiHandler.GetUserByID)
-		r.Get("/username/{name}", apiHandler.GetUserByName)
-
-		// 認證相關路由
-		r.Post("/auth/register", authHandler.Register)     // 註冊路由
-		r.Post("/auth/login", authHandler.Login)           // 登入路由
+			authHandler := api.NewAuthHandler(app) // 新增 AuthHandler 實例
+			fileUploadHandler := api.NewFileUploadHandler(app) // 新增 FileUploadHandler 實例
+	
+		// 註冊靜態檔案伺服器
+		fileServer := http.FileServer(http.Dir("./public"))
+		// chi 建議使用 Mount 來處理靜態檔案，並移除路徑前綴。
+		mux.Mount("/static", http.StripPrefix("/static/", fileServer))
+	
+		// API 路由群組
+		mux.Route("/api", func(r chi.Router) {
+			r.Get("/users", apiHandler.GetAllUsers)
+			r.Get("/users/{id}", apiHandler.GetUserByID)
+			r.Get("/username/{name}", apiHandler.GetUserByName)
+	
+			// 檔案上傳路由
+			r.Post("/demo-upload-file", fileUploadHandler.UploadFile)
+	
+			// 認證相關路由
+			r.Post("/auth/register", authHandler.Register)     // 註冊路由		r.Post("/auth/login", authHandler.Login)           // 登入路由
 		r.Post("/auth/refresh-token", authHandler.Refresh) // 換新權杖路由
 
 		// 登出路由，應用 JWT 驗證中間件

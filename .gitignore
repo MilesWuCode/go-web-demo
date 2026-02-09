@@ -1,3 +1,5 @@
 .env
 db.sqlite
 web-demo
+rustfs/*
+public/upload/*

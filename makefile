@@ -11,3 +11,13 @@ build:
 
 tidy:
 	go mod tidy
+
+rustfs:
+	docker run -d \
+	-p 9000:9000 \
+	-p 9001:9001 \
+	-v $(pwd)/rustfs/data:/data \
+	-v $(pwd)/rustfs/logs:/logs \
+	-e RUSTFS_ACCESS_KEY=rustfsadmin \
+  	-e RUSTFS_SECRET_KEY=rustfsadmin \
+	rustfs/rustfs:latest
