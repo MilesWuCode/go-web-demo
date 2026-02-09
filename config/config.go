@@ -18,6 +18,7 @@ type AppConfig struct {
 	JWTSecret           string
 	JWTExpiresIn        int // In minutes
 	JWTRefreshExpiresIn int // In minutes
+	AwsS3BucketName     string
 }
 
 var (
@@ -44,6 +45,7 @@ func Get() *AppConfig {
 			JWTSecret:           getEnv("JWT_SECRET", "super-secret-jwt-key"),
 			JWTExpiresIn:        getIntEnv("JWT_EXPIRES_IN", 60),              // Default to 60 minutes
 			JWTRefreshExpiresIn: getIntEnv("JWT_REFRESH_EXPIRES_IN", 7*24*60), // Default to 7 days (in minutes)
+			AwsS3BucketName:     getEnv("AWS_S3_BUCKET_NAME", "web-demo"),
 		}
 	})
 	return instance
