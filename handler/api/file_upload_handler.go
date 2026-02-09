@@ -3,12 +3,11 @@ package api
 import (
 	"fmt"
 	"io"
-	"math/rand"
 	"net/http"
 	"os"
 	"path/filepath"
-	"time"
 	"web-demo/server"
+	"web-demo/util" // 導入 util 套件
 )
 
 // FileUploadHandler 結構用於處理檔案上傳相關請求
@@ -34,7 +33,7 @@ func (h *FileUploadHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
 	defer file.Close()
 
 	// 產生一個混合英文和數字的唯一檔案名稱
-	newFileName := generateEnglishMixedFileName(handler.Filename)
+	newFileName := util.GenerateEnglishMixedFileName(handler.Filename)
 	destinationPath := filepath.Join("public", "upload", newFileName)
 
 	// 確保 public/upload 目錄存在
@@ -64,26 +63,4 @@ func (h *FileUploadHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
 		"file_name": newFileName,
 		"file_path": "/upload/" + newFileName, // 提供相對於 public 的路徑
 	})
-}
-
-// generateEnglishMixedFileName 產生一個混合英文和數字的檔案名稱
-func generateEnglishMixedFileName(originalFileName string) string {
-	ext := filepath.Ext(originalFileName)
-
-	// 使用時間戳和隨機字串確保唯一性
-	timestamp := time.Now().UnixNano()
-	randomString := generateRandomString(8) // 產生 8 個字元的隨機字串
-
-	return fmt.Sprintf("%d_%s%s", timestamp, randomString, ext)
-}
-
-// generateRandomString 產生指定長度的隨機英數字元串
-func generateRandomString(length int) string {
-	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	seededRand := rand.New(rand.NewSource(time.Now().UnixNano()))
-	b := make([]byte, length)
-	for i := range b {
-		b[i] = charset[seededRand.Intn(len(charset))]
-	}
-	return string(b)
 }
