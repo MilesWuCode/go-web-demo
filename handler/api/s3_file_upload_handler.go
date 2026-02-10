@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"net/http" // 新增導入
+	"mime" // 新增導入
+	"net/http"
+	"path/filepath" // 新增導入
 	"web-demo/server"
 	"web-demo/util"
 
@@ -26,7 +28,7 @@ type S3FileUploadHandler struct {
 func NewS3FileUploadHandler(app *server.Application) *S3FileUploadHandler {
 	// 載入 AWS 預設配置
 	cfg, err := config.LoadDefaultConfig(context.Background(),
-		config.WithRegion("us-east-1"),
+		config.WithRegion("us-east-1"), // 硬編碼區域，如果 RustFS 需要特定區域，或應從 AppConfig 獲取
 		config.WithBaseEndpoint(app.Config.S3Endpoint),
 		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(app.Config.S3AccessKeyID, app.Config.S3SecretAccessKey, "")),
 	)
@@ -64,18 +66,48 @@ func (h *S3FileUploadHandler) UploadS3File(w http.ResponseWriter, r *http.Reques
 	// 產生一個混合英文和數字的唯一檔案名稱
 	newFileName := util.GenerateEnglishMixedFileName(handler.Filename)
 
+	// 根據檔案副檔名判斷 Content-Type
+	contentType := mime.TypeByExtension(filepath.Ext(handler.Filename))
+	if contentType == "" {
+		// 如果無法根據副檔名判斷，則設為通用二進位流
+		contentType = "application/octet-stream"
+	}
+
+	// 將檔案上傳到 S3
 	_, err = h.S3Client.PutObject(r.Context(), &s3.PutObjectInput{
-		Bucket: aws.String(h.S3BucketName),
-		Key:    aws.String(newFileName),
-		Body:   file,
+		Bucket:      aws.String(h.S3BucketName),
+		Key:         aws.String(newFileName),
+		Body:        file,
+		ACL:         "public-read",    // 重新啟用 ACL: "public-read"
+		ContentType: aws.String(contentType), // 設定 Content-Type
 	})
 
 	if err != nil {
-		h.App.ErrorJSON(w, fmt.Errorf("無法獲取上傳檔案: %w", err), http.StatusBadRequest)
+		// 修正錯誤訊息和狀態碼，並在錯誤後返回
+		h.App.ErrorJSON(w, fmt.Errorf("無法上傳檔案到 S3: %w", err), http.StatusInternalServerError)
+		return
+	}
+
+	// 根據是否使用自訂 S3 Endpoint 建構 S3 物件的公開 URL
+	var s3ObjectURL string
+	if h.App.Config.S3Endpoint != "" {
+		// 如果有自訂 S3 Endpoint，則建構自訂 URL
+		s3ObjectURL = fmt.Sprintf("%s/%s/%s",
+			h.App.Config.S3Endpoint,
+			h.S3BucketName,
+			newFileName)
+	} else {
+		// 否則，建構標準 AWS S3 URL
+		// 注意：cfg.Region 來自 NewS3FileUploadHandler 中的 config.WithRegion("us-east-1")
+		s3ObjectURL = fmt.Sprintf("https://%s.s3.%s.amazonaws.com/%s",
+			h.S3BucketName,
+			"us-east-1", // 這裡使用硬編碼區域，因為 cfg.Region 在此作用域不可用
+			newFileName)
 	}
 
 	h.App.WriteJSON(w, http.StatusOK, map[string]string{
 		"message":   "檔案上傳到 S3 成功",
 		"file_name": newFileName,
+		"file_url":  s3ObjectURL,
 	})
 }
