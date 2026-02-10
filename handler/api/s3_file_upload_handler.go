@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"mime" // 新增導入
 	"net/http"
@@ -66,11 +67,28 @@ func (h *S3FileUploadHandler) UploadS3File(w http.ResponseWriter, r *http.Reques
 	// 產生一個混合英文和數字的唯一檔案名稱
 	newFileName := util.GenerateEnglishMixedFileName(handler.Filename)
 
-	// 根據檔案副檔名判斷 Content-Type
-	contentType := mime.TypeByExtension(filepath.Ext(handler.Filename))
-	if contentType == "" {
-		// 如果無法根據副檔名判斷，則設為通用二進位流
-		contentType = "application/octet-stream"
+	// 讀取檔案開頭部分以偵測 Content-Type
+	buffer := make([]byte, 512)
+	_, err = file.Read(buffer)
+	if err != nil && err != io.EOF {
+		h.App.ErrorJSON(w, fmt.Errorf("無法讀取檔案內容以偵測類型: %w", err), http.StatusInternalServerError)
+		return
+	}
+	// 將讀取指針重置回檔案開頭
+	_, err = file.Seek(0, 0)
+	if err != nil {
+		h.App.ErrorJSON(w, fmt.Errorf("無法重置檔案讀取指針: %w", err), http.StatusInternalServerError)
+		return
+	}
+
+	// 優先使用 http.DetectContentType 偵測 MIME 類型
+	contentType := http.DetectContentType(buffer)
+	if contentType == "application/octet-stream" {
+		// 如果 http.DetectContentType 仍是通用類型，則嘗試使用副檔名判斷
+		extType := mime.TypeByExtension(filepath.Ext(handler.Filename))
+		if extType != "" {
+			contentType = extType
+		}
 	}
 
 	// 將檔案上傳到 S3
@@ -78,7 +96,7 @@ func (h *S3FileUploadHandler) UploadS3File(w http.ResponseWriter, r *http.Reques
 		Bucket:      aws.String(h.S3BucketName),
 		Key:         aws.String(newFileName),
 		Body:        file,
-		ACL:         "public-read",    // 重新啟用 ACL: "public-read"
+		ACL:         "public-read",           // 重新啟用 ACL: "public-read"
 		ContentType: aws.String(contentType), // 設定 Content-Type
 	})
 
