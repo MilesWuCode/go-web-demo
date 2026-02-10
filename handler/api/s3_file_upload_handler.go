@@ -4,13 +4,14 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"net/http"
-	"os"
+	"net/http" // 新增導入
 	"web-demo/server"
 	"web-demo/util"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
+
+	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
@@ -23,23 +24,28 @@ type S3FileUploadHandler struct {
 
 // NewS3FileUploadHandler 建立並回傳一個新的 S3FileUploadHandler 實例
 func NewS3FileUploadHandler(app *server.Application) *S3FileUploadHandler {
-	cfg, err := config.LoadDefaultConfig(context.Background())
+	// 載入 AWS 預設配置
+	cfg, err := config.LoadDefaultConfig(context.Background(),
+		config.WithRegion("us-east-1"),
+		config.WithBaseEndpoint(app.Config.S3Endpoint),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(app.Config.S3AccessKeyID, app.Config.S3SecretAccessKey, "")),
+	)
 	if err != nil {
-		log.Println("無法載入 AWS 設定:", err) // 使用 app.Logger
+		log.Println("無法載入 AWS 設定:", err)
 		return nil
 	}
 
-	// 從 AppConfig 中獲取 S3 儲存桶名稱
-	s3BucketName := app.Config.S3BucketName
-	if s3BucketName == "" {
-		log.Println("AppConfig.S3BucketName 未設定") // 使用 app.Logger
-		return nil
-	}
+	// 建立 S3 客戶端，並應用自訂端點解析器和路徑樣式訪問
+	s3Client := s3.NewFromConfig(cfg, func(o *s3.Options) {
+		// 如果 S3 相容服務需要路徑樣式訪問，請設定為 true
+		// 例如：MinIO, RustFS 等
+		o.UsePathStyle = true
+	})
 
 	return &S3FileUploadHandler{
 		App:          app,
-		S3Client:     s3.NewFromConfig(cfg),
-		S3BucketName: s3BucketName,
+		S3Client:     s3Client,
+		S3BucketName: app.Config.S3BucketName,
 	}
 }
 
@@ -58,36 +64,18 @@ func (h *S3FileUploadHandler) UploadS3File(w http.ResponseWriter, r *http.Reques
 	// 產生一個混合英文和數字的唯一檔案名稱
 	newFileName := util.GenerateEnglishMixedFileName(handler.Filename)
 
-	// 將檔案上傳到 S3
-	_, err = h.S3Client.PutObject(context.TODO(), &s3.PutObjectInput{
+	_, err = h.S3Client.PutObject(r.Context(), &s3.PutObjectInput{
 		Bucket: aws.String(h.S3BucketName),
 		Key:    aws.String(newFileName),
 		Body:   file,
-		ACL:    "public-read", // 設置為公開讀取，根據需求調整
 	})
-	if err != nil {
-		h.App.ErrorJSON(w, fmt.Errorf("無法上傳檔案到 S3: %w", err), http.StatusInternalServerError)
-		return
-	}
 
-	var s3ObjectURL string
-	if h.App.Config.S3Endpoint != "" {
-		// 如果有自訂 S3 Endpoint，則建構自訂 URL
-		s3ObjectURL = fmt.Sprintf("%s/%s/%s",
-			h.App.Config.S3Endpoint,
-			h.S3BucketName,
-			newFileName)
-	} else {
-		// 否則，建構標準 AWS S3 URL
-		s3ObjectURL = fmt.Sprintf("https://%s.s3.%s.amazonaws.com/%s",
-			h.S3BucketName,
-			os.Getenv("AWS_REGION"), // 假設 AWS_REGION 環境變數已設定
-			newFileName)
+	if err != nil {
+		h.App.ErrorJSON(w, fmt.Errorf("無法獲取上傳檔案: %w", err), http.StatusBadRequest)
 	}
 
 	h.App.WriteJSON(w, http.StatusOK, map[string]string{
-		"message":       "檔案上傳到 S3 成功",
-		"file_name":     newFileName,
-		"s3_object_url": s3ObjectURL,
+		"message":   "檔案上傳到 S3 成功",
+		"file_name": newFileName,
 	})
 }
