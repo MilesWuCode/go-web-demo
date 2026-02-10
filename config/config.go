@@ -16,9 +16,12 @@ type AppConfig struct {
 	Port                string
 	DBPath              string
 	JWTSecret           string
-	JWTExpiresIn        int // In minutes
-	JWTRefreshExpiresIn int // In minutes
-	AwsS3BucketName     string
+	JWTExpiresIn        int    // In minutes
+	JWTRefreshExpiresIn int    // In minutes
+	S3Endpoint          string // RustFS 或其他 S3 相容服務的端點
+	S3BucketName        string
+	S3AccessKeyID       string // S3 相容服務的 Access Key ID
+	S3SecretAccessKey   string // S3 相容服務的 Secret Access Key
 }
 
 var (
@@ -45,7 +48,10 @@ func Get() *AppConfig {
 			JWTSecret:           getEnv("JWT_SECRET", "super-secret-jwt-key"),
 			JWTExpiresIn:        getIntEnv("JWT_EXPIRES_IN", 60),              // Default to 60 minutes
 			JWTRefreshExpiresIn: getIntEnv("JWT_REFRESH_EXPIRES_IN", 7*24*60), // Default to 7 days (in minutes)
-			AwsS3BucketName:     getEnv("AWS_S3_BUCKET_NAME", "web-demo"),
+			S3Endpoint:          getEnv("S3_ENDPOINT", "http://localhost:9000"),
+			S3BucketName:        getEnv("S3_BUCKET_NAME", "web-demo"),
+			S3AccessKeyID:       getEnv("S3_ACCESS_KEY_ID", ""),
+			S3SecretAccessKey:   getEnv("S3_SECRET_ACCESS_KEY", ""),
 		}
 	})
 	return instance
