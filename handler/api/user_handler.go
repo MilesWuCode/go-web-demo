@@ -5,15 +5,15 @@ import (
 	"net/http"
 	"strconv"
 	"web-demo/generated/query"
-	"web-demo/util"
+	utilPagination "web-demo/util/pagination"
 
 	"gorm.io/gorm"
 )
 
 // PaginatedUserResponse 是包含分頁資訊的使用者列表回應結構
 type PaginatedUserResponse struct {
-	Data       []UserResponse  `json:"data"`
-	Pagination util.Pagination `json:"pagination"`
+	Data       []UserResponse            `json:"data"`
+	Pagination utilPagination.Pagination `json:"pagination"`
 }
 
 // GetAllUsers 處理 GET /api/users 請求，並支援分頁
@@ -53,7 +53,7 @@ func (h *APIHandler) GetAllUsers(w http.ResponseWriter, r *http.Request) {
 	// --- 組合分頁回應 ---
 	paginatedResponse := PaginatedUserResponse{
 		Data:       userResponses,
-		Pagination: util.NewPagination(page, pageSize, totalRecords),
+		Pagination: utilPagination.NewPagination(page, pageSize, totalRecords),
 	}
 
 	// 回傳 JSON 資料

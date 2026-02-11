@@ -6,7 +6,7 @@ import (
 	"log"
 	"net/http"
 	"web-demo/server"
-	"web-demo/util"
+	utilFile "web-demo/util/file"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -62,10 +62,10 @@ func (h *S3FileUploadHandler) UploadS3File(w http.ResponseWriter, r *http.Reques
 	defer file.Close()
 
 	// 產生一個混合英文和數字的唯一檔案名稱
-	newFileName := util.GenerateEnglishMixedFileName(handler.Filename)
+	newFileName := utilFile.GenerateEnglishMixedFileName(handler.Filename)
 
 	// 偵測 Content-Type
-	contentType, err := util.DetectContentType(file, handler.Filename)
+	contentType, err := utilFile.DetectContentType(file, handler.Filename)
 	if err != nil {
 		h.App.ErrorJSON(w, fmt.Errorf("無法偵測檔案類型: %w", err), http.StatusInternalServerError)
 		return
