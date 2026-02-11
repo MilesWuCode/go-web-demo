@@ -1,23 +1,30 @@
-package api
+package user
 
 import (
 	"errors"
 	"net/http"
 	"strconv"
 	"web-demo/generated/query"
+	apiHandler "web-demo/handler/api"
+	"web-demo/server"
 	utilPagination "web-demo/util/pagination"
 
 	"gorm.io/gorm"
 )
 
+// UserHandler 結構用於處理使用者相關請求
+type UserHandler struct {
+	apiHandler.APIHandler
+}
+
 // PaginatedUserResponse 是包含分頁資訊的使用者列表回應結構
 type PaginatedUserResponse struct {
-	Data       []UserResponse            `json:"data"`
+	Data       []apiHandler.UserResponse `json:"data"`
 	Pagination utilPagination.Pagination `json:"pagination"`
 }
 
 // GetAllUsers 處理 GET /api/users 請求，並支援分頁
-func (h *APIHandler) GetAllUsers(w http.ResponseWriter, r *http.Request) {
+func (h *UserHandler) GetAllUsers(w http.ResponseWriter, r *http.Request) {
 	// --- 讀取分頁參數 ---
 	page := h.App.ReadIntQuery(r, "page", 1)
 	pageSize := h.App.ReadIntQuery(r, "pageSize", 10)
@@ -41,9 +48,9 @@ func (h *APIHandler) GetAllUsers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// --- 轉換為回應結構 ---
-	var userResponses []UserResponse
+	var userResponses []apiHandler.UserResponse
 	for _, user := range users {
-		userResponses = append(userResponses, UserResponse{
+		userResponses = append(userResponses, apiHandler.UserResponse{
 			ID:    user.ID,
 			Name:  user.Name,
 			Email: user.Email,
@@ -61,7 +68,7 @@ func (h *APIHandler) GetAllUsers(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetUserByID 處理 GET /api/users/{id} 請求
-func (h *APIHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
+func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	id, err := strconv.ParseUint(idStr, 10, 64) // 使用 ParseUint 確保 ID 為正整數
 	if err != nil {
@@ -82,7 +89,7 @@ func (h *APIHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userResponse := UserResponse{
+	userResponse := apiHandler.UserResponse{
 		ID:    user.ID,
 		Name:  user.Name,
 		Email: user.Email,
@@ -92,7 +99,7 @@ func (h *APIHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetUserByName 處理 GET /api/username/{name} 請求
-func (h *APIHandler) GetUserByName(w http.ResponseWriter, r *http.Request) {
+func (h *UserHandler) GetUserByName(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	if name == "" {
 		h.App.ErrorJSON(w, errors.New("invalid user name"), http.StatusBadRequest)
@@ -110,11 +117,16 @@ func (h *APIHandler) GetUserByName(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userResponse := UserResponse{
+	userResponse := apiHandler.UserResponse{
 		ID:    user.ID,
 		Name:  user.Name,
 		Email: user.Email,
 	}
 
 	h.App.WriteJSON(w, http.StatusOK, userResponse)
+}
+
+// NewUserHandler 建立並回傳一個新的 UserHandler 實例
+func NewUserHandler(app *server.Application) *UserHandler {
+	return &UserHandler{apiHandler.APIHandler{App: app}}
 }

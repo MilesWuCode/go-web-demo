@@ -4,7 +4,10 @@ import (
 	"errors"
 	"net/http"
 	"strings"
-	"web-demo/handler/api"
+	authHandler "web-demo/handler/api/auth"      // Import the new auth handler package
+	fileHandler "web-demo/handler/api/file"      // Import the new file handler package
+	s3FileHandler "web-demo/handler/api/s3_file" // Import the new s3_file handler package
+	userHandler "web-demo/handler/api/user"      // Import the new user handler package
 	"web-demo/handler/web"
 	"web-demo/server"
 
@@ -21,11 +24,11 @@ func NewRouter(app *server.Application) http.Handler {
 	mux.Use(middleware.Recoverer) // 從 panic 中恢復
 
 	// 建立處理器實例
-	apiHandler := api.NewAPIHandler(app)
 	webHandler := web.NewWebHandler(app)
-	authHandler := api.NewAuthHandler(app)                 // 新增 AuthHandler 實例
-	fileUploadHandler := api.NewFileUploadHandler(app)     // 新增 FileUploadHandler 實例
-	s3FileUploadHandler := api.NewS3FileUploadHandler(app) // 新增 S3FileUploadHandler 實例
+	authH := authHandler.NewAuthHandler(app)
+	userH := userHandler.NewUserHandler(app)
+	fileUploadH := fileHandler.NewFileUploadHandler(app)
+	s3FileUploadHandler := s3FileHandler.NewS3FileUploadHandler(app) // New S3 file upload handler instance
 
 	// 註冊靜態檔案伺服器
 	fileServer := http.FileServer(http.Dir("./public"))
@@ -34,22 +37,22 @@ func NewRouter(app *server.Application) http.Handler {
 
 	// API 路由群組
 	mux.Route("/api", func(r chi.Router) {
-		r.Get("/users", apiHandler.GetAllUsers)
-		r.Get("/users/{id}", apiHandler.GetUserByID)
-		r.Get("/username/{name}", apiHandler.GetUserByName)
+		r.Get("/users", userH.GetAllUsers)
+		r.Get("/users/{id}", userH.GetUserByID)
+		r.Get("/username/{name}", userH.GetUserByName)
 
 		// 檔案上傳路由
-		r.Post("/demo-upload-file", fileUploadHandler.UploadFile)
+		r.Post("/demo-upload-file", fileUploadH.UploadFile)
 		r.Post("/demo-s3-file-upload", s3FileUploadHandler.UploadS3File)
 
 		// 認證相關路由
-		r.Post("/auth/register", authHandler.Register)     // 註冊路由
-		r.Post("/auth/login", authHandler.Login)           // 登入路由
-		r.Post("/auth/refresh-token", authHandler.Refresh) // 換新權杖路由
+		r.Post("/auth/register", authH.Register)     // 註冊路由
+		r.Post("/auth/login", authH.Login)           // 登入路由
+		r.Post("/auth/refresh-token", authH.Refresh) // 換新權杖路由
 
 		// 登出路由，應用 JWT 驗證中間件
-		r.With(app.AuthMiddleware).Post("/auth/logout", authHandler.Logout)
-		r.With(app.AuthMiddleware).Get("/auth/me", authHandler.Me)
+		r.With(app.AuthMiddleware).Post("/auth/logout", authH.Logout)
+		r.With(app.AuthMiddleware).Get("/auth/me", authH.Me)
 	})
 
 	// 網頁路由

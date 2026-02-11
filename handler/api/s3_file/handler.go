@@ -1,4 +1,4 @@
-package api
+package s3_file
 
 import (
 	"context"
