@@ -3,11 +3,8 @@ package api
 import (
 	"context"
 	"fmt"
-	"io"
 	"log"
-	"mime" // 新增導入
 	"net/http"
-	"path/filepath" // 新增導入
 	"web-demo/server"
 	"web-demo/util"
 
@@ -67,28 +64,11 @@ func (h *S3FileUploadHandler) UploadS3File(w http.ResponseWriter, r *http.Reques
 	// 產生一個混合英文和數字的唯一檔案名稱
 	newFileName := util.GenerateEnglishMixedFileName(handler.Filename)
 
-	// 讀取檔案開頭部分以偵測 Content-Type
-	buffer := make([]byte, 512)
-	_, err = file.Read(buffer)
-	if err != nil && err != io.EOF {
-		h.App.ErrorJSON(w, fmt.Errorf("無法讀取檔案內容以偵測類型: %w", err), http.StatusInternalServerError)
-		return
-	}
-	// 將讀取指針重置回檔案開頭
-	_, err = file.Seek(0, 0)
+	// 偵測 Content-Type
+	contentType, err := util.DetectContentType(file, handler.Filename)
 	if err != nil {
-		h.App.ErrorJSON(w, fmt.Errorf("無法重置檔案讀取指針: %w", err), http.StatusInternalServerError)
+		h.App.ErrorJSON(w, fmt.Errorf("無法偵測檔案類型: %w", err), http.StatusInternalServerError)
 		return
-	}
-
-	// 優先使用 http.DetectContentType 偵測 MIME 類型
-	contentType := http.DetectContentType(buffer)
-	if contentType == "application/octet-stream" {
-		// 如果 http.DetectContentType 仍是通用類型，則嘗試使用副檔名判斷
-		extType := mime.TypeByExtension(filepath.Ext(handler.Filename))
-		if extType != "" {
-			contentType = extType
-		}
 	}
 
 	// 將檔案上傳到 S3
