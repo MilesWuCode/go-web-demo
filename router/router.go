@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 	authHandler "web-demo/handler/api/auth"      // Import the new auth handler package
+	googleVerifyHandler "web-demo/handler/api/auth" // Import the new google verify handler package
 	fileHandler "web-demo/handler/api/file"      // Import the new file handler package
 	s3FileHandler "web-demo/handler/api/s3_file" // Import the new s3_file handler package
 	userHandler "web-demo/handler/api/user"      // Import the new user handler package
@@ -26,6 +27,7 @@ func NewRouter(app *server.Application) http.Handler {
 	// 建立處理器實例
 	webHandler := web.NewWebHandler(app)
 	authH := authHandler.NewAuthHandler(app)
+	googleVerifyH := googleVerifyHandler.NewGoogleVerifyHandler(app)
 	userH := userHandler.NewUserHandler(app)
 	fileUploadH := fileHandler.NewFileUploadHandler(app)
 	s3FileUploadHandler := s3FileHandler.NewS3FileUploadHandler(app) // New S3 file upload handler instance
@@ -49,6 +51,7 @@ func NewRouter(app *server.Application) http.Handler {
 		r.Post("/auth/register", authH.Register)     // 註冊路由
 		r.Post("/auth/login", authH.Login)           // 登入路由
 		r.Post("/auth/refresh-token", authH.Refresh) // 換新權杖路由
+		r.Post("/auth/google/verify-token", googleVerifyH.VerifyGoogleIDToken) // Google ID Token 驗證路由
 
 		// 登出路由，應用 JWT 驗證中間件
 		r.With(app.AuthMiddleware).Post("/auth/logout", authH.Logout)

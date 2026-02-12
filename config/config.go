@@ -22,6 +22,7 @@ type AppConfig struct {
 	S3BucketName        string
 	S3AccessKeyID       string // S3 相容服務的 Access Key ID
 	S3SecretAccessKey   string // S3 相容服務的 Secret Access Key
+	GoogleClientID      string
 }
 
 var (
@@ -52,6 +53,7 @@ func Get() *AppConfig {
 			S3BucketName:        getEnv("S3_BUCKET_NAME", "web-demo"),
 			S3AccessKeyID:       getEnv("S3_ACCESS_KEY_ID", ""),
 			S3SecretAccessKey:   getEnv("S3_SECRET_ACCESS_KEY", ""),
+			GoogleClientID:      getEnv("GOOGLE_CLIENT_ID", ""),
 		}
 	})
 	return instance
