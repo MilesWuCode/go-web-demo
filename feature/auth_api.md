@@ -77,5 +77,11 @@
 
 - 製作第三方登入
   - 使用**markbates/goth**
-  - Google登入
-  - 不需要用戶頭像
+  - Google登入，不需要用戶頭像
+  - 建立需要使用的資料表來存GoogleID，未來有其他登入也可使用
+  - 當前端登入完成後，取得Google提供的身份憑證
+    - 驗證身份憑證
+    - 若無帳號建立帳號
+    - 生成JWT授權
+      - access_token 有效期限1小時
+      - refresh_token 有效期限7天
