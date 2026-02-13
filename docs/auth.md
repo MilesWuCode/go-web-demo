@@ -1,10 +1,9 @@
-# Auth API
+# 授權功能
 
 ## 使用
 
 - **golang-jwt/jwt** 授權token
 - **crypto/bcrypt** 密碼加密
-- **markbates/goth** 第三方登入
 - **go-playground/validator** 表單傳值的驗證套件
 
 ## 目標
@@ -76,7 +75,6 @@
   - 清除授權
 
 - 製作第三方登入
-  - 使用**markbates/goth**
   - Google登入，不需要用戶頭像
   - 建立SocialProvider資料表來存GoogleID，未來有其他登入也可使用
   - 當前端登入完成後，取得Google提供的身份憑證

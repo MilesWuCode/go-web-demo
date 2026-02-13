@@ -1,0 +1,19 @@
+# 專案結構
+
+- cms:直接執行指令
+- config:環境變數
+- database:資料庫
+- docs:文件
+- generate:放置自動生成代碼
+- handler:等同於MVC中的controller
+  - api:api使用的handler
+    - auth:授權相關操作
+    - demo:範例
+  - web:網頁使用的handler
+- model:GORM使用的模型
+- public:放置css/image/js的靜態文件
+- router:提供handler註冊路由器腳本
+- server:伺服器啓動腳本
+- middleware:路由器的中間層腳本(尚未從server獨立出來)
+- template:放置html模板供
+- util:放置工具函式腳本
