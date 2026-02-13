@@ -102,14 +102,14 @@ func (h *GoogleVerifyHandler) VerifyGoogleIDToken(w http.ResponseWriter, r *http
 	}
 
 	// 產生 JWT token
-	appToken, err := utilAuth.GenerateToken(&user, time.Minute*time.Duration(h.App.Config.JWTExpiresIn), h.App.Config.JWTSecret)
+	accessToken, err := utilAuth.GenerateToken(&user, time.Minute*time.Duration(h.App.Config.JWTExpiresIn), h.App.Config.JWTSecret)
 	if err != nil {
 		h.App.ErrorJSON(w, fmt.Errorf("無法產生應用程式 token: %v", err), http.StatusInternalServerError)
 		return
 	}
 
 	// 產生 Refresh Token (如果應用需要)
-	refreshTokenString, err := utilAuth.CreateAndStoreRefreshToken(h.App.DB, user.ID, time.Minute*time.Duration(h.App.Config.JWTRefreshExpiresIn))
+	refreshToken, err := utilAuth.CreateAndStoreRefreshToken(h.App.DB, user.ID, time.Minute*time.Duration(h.App.Config.JWTRefreshExpiresIn))
 	if err != nil {
 		h.App.ErrorJSON(w, fmt.Errorf("無法產生換新權杖: %v", err), http.StatusInternalServerError)
 		return
@@ -122,9 +122,9 @@ func (h *GoogleVerifyHandler) VerifyGoogleIDToken(w http.ResponseWriter, r *http
 			Name:  user.Name,
 			Email: user.Email,
 		},
-		"access_token":             appToken,
-		"refresh_token":            refreshTokenString,
-		"access_token_expires_in":  h.App.Config.JWTExpiresIn * 60, // Convert minutes to seconds
+		"access_token":             accessToken,
+		"access_token_expires_in":  h.App.Config.JWTExpiresIn * 60,
+		"refresh_token":            refreshToken,
 		"refresh_token_expires_in": h.App.Config.JWTRefreshExpiresIn * 60,
 	})
 }

@@ -185,7 +185,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 產生 JWT token
-	token, err := auth.GenerateToken(&user, time.Minute*time.Duration(h.App.Config.JWTExpiresIn), h.App.Config.JWTSecret)
+	accessToken, err := auth.GenerateToken(&user, time.Minute*time.Duration(h.App.Config.JWTExpiresIn), h.App.Config.JWTSecret)
 	if err != nil {
 		h.App.ErrorJSON(w, errors.New("無法產生認證 token"), http.StatusInternalServerError)
 		return
@@ -199,15 +199,14 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.App.WriteJSON(w, http.StatusOK, map[string]interface{}{
-		"message": "登入成功",
 		"user": apiHandler.UserResponse{
 			ID:    user.ID,
 			Name:  user.Name,
 			Email: user.Email,
 		},
-		"access_token":             token,
-		"refresh_token":            refreshToken,
+		"access_token":             accessToken,
 		"access_token_expires_in":  h.App.Config.JWTExpiresIn * 60, // Convert minutes to seconds
+		"refresh_token":            refreshToken,
 		"refresh_token_expires_in": h.App.Config.JWTRefreshExpiresIn * 60,
 	})
 }
@@ -303,7 +302,7 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 產生新的 JWT token
-	newToken, err := auth.GenerateToken(&user, time.Minute*time.Duration(h.App.Config.JWTExpiresIn), h.App.Config.JWTSecret)
+	accessToken, err := auth.GenerateToken(&user, time.Minute*time.Duration(h.App.Config.JWTExpiresIn), h.App.Config.JWTSecret)
 	if err != nil {
 		h.App.ErrorJSON(w, errors.New("無法產生新的認證 token"), http.StatusInternalServerError)
 		return
@@ -323,8 +322,13 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.App.WriteJSON(w, http.StatusOK, map[string]interface{}{
-		"message":                  "權杖已更新",
-		"token":                    newToken,
+		"user": apiHandler.UserResponse{
+			ID:    user.ID,
+			Name:  user.Name,
+			Email: user.Email,
+		},
+		"access_token":             accessToken,
+		"access_token_expires_in":  h.App.Config.JWTExpiresIn * 60,
 		"refresh_token":            newRefreshToken,
 		"refresh_token_expires_in": h.App.Config.JWTRefreshExpiresIn * 60,
 	})
