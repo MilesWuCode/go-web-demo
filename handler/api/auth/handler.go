@@ -270,23 +270,15 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	}
 	refreshToken := parts[1]
 
-	// 查詢 Refresh Token 是否存在
+	// 查詢 Refresh Token 是否存在且未過期
 	var tokenRecord model.RefreshToken
-	result := h.App.DB.Where("token = ?", refreshToken).First(&tokenRecord)
+	result := h.App.DB.Where("token = ? AND expires_at > ?", refreshToken, time.Now()).First(&tokenRecord)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		h.App.ErrorJSON(w, errors.New("無效的換新權杖"), http.StatusUnauthorized)
+		h.App.ErrorJSON(w, errors.New("無效的換新權杖或已過期"), http.StatusUnauthorized)
 		return
 	}
 	if result.Error != nil {
 		h.App.ErrorJSON(w, result.Error, http.StatusInternalServerError)
-		return
-	}
-
-	// 檢查是否過期
-	if tokenRecord.ExpiresAt.Before(time.Now()) {
-		// 可以選擇在此刪除過期的 token
-		h.App.DB.Delete(&tokenRecord)
-		h.App.ErrorJSON(w, errors.New("換新權杖已過期"), http.StatusUnauthorized)
 		return
 	}
 
