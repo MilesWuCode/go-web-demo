@@ -40,7 +40,7 @@ func GenerateRefreshToken() (string, error) {
 // CreateAndStoreRefreshToken 生成一個新的 refresh token，存入資料庫並返回
 func CreateAndStoreRefreshToken(db *gorm.DB, userID uint, expiresIn time.Duration) (string, error) {
 	// 1. 生成隨機 token 字串
-	tokenString, err := GenerateRefreshToken()
+	token, err := GenerateRefreshToken()
 	if err != nil {
 		return "", fmt.Errorf("無法生成 refresh token 字串: %w", err)
 	}
@@ -51,7 +51,7 @@ func CreateAndStoreRefreshToken(db *gorm.DB, userID uint, expiresIn time.Duratio
 	// 3. 建立紀錄
 	refreshToken := model.RefreshToken{
 		UserID:    userID,
-		Token:     tokenString,
+		Token:     token,
 		ExpiresAt: expiresAt,
 	}
 
@@ -60,5 +60,5 @@ func CreateAndStoreRefreshToken(db *gorm.DB, userID uint, expiresIn time.Duratio
 		return "", fmt.Errorf("無法儲存 refresh token: %w", result.Error)
 	}
 
-	return tokenString, nil
+	return token, nil
 }
