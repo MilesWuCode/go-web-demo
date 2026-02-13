@@ -1,12 +1,12 @@
-package render
+package template
 
 import (
 	"html/template"
 	"path/filepath"
 )
 
-// TemplateCache 解析 template 目錄下所有 .html 檔案並回傳一個快取 map
-func TemplateCache() (map[string]*template.Template, error) {
+// Cache 解析 template 目錄下所有 .html 檔案並回傳一個快取 map
+func Cache() (map[string]*template.Template, error) {
 	// 初始化一個新的 map 來作為快取
 	cache := map[string]*template.Template{}
 

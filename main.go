@@ -13,7 +13,7 @@ import (
 	"web-demo/database"
 	"web-demo/router"
 	"web-demo/server"
-	"web-demo/util/render"
+	"web-demo/util/template"
 )
 
 func main() {
@@ -28,7 +28,7 @@ func main() {
 	defer database.CloseDB(db) // 使用 defer 確保程式結束時關閉資料庫
 
 	// 初始化模板快取
-	templateCache, err := render.TemplateCache()
+	templateCache, err := template.Cache()
 	if err != nil {
 		log.Fatalf("無法建立模板快取: %v", err)
 	}
