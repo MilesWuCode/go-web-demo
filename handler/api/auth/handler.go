@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 	apiHandler "web-demo/handler/api"
+	"web-demo/middleware"
 	"web-demo/model"
 	"web-demo/server"
 
@@ -385,7 +386,7 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 // Me 處理取得個人資料請求
 func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 	// 從 Context 取得 user_id (由 AuthMiddleware 設定)
-	userID, ok := r.Context().Value(server.UserContextKey).(uint)
+	userID, ok := r.Context().Value(middleware.UserContextKey).(uint)
 	if !ok {
 		h.App.ErrorJSON(w, errors.New("無法取得使用者資訊"), http.StatusUnauthorized)
 		return

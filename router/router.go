@@ -10,10 +10,11 @@ import (
 	s3FileHandler "web-demo/handler/api/s3_file" // Import the new s3_file handler package
 	userHandler "web-demo/handler/api/user"      // Import the new user handler package
 	"web-demo/handler/web"
+	"web-demo/middleware"
 	"web-demo/server"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
+	chiMiddleware "github.com/go-chi/chi/v5/middleware"
 )
 
 // NewRouter 使用 chi 路由器並回傳一個 http.Handler 介面。
@@ -21,8 +22,8 @@ func NewRouter(app *server.Application) http.Handler {
 	mux := chi.NewRouter()
 
 	// 使用 chi 內建的中介軟體
-	mux.Use(middleware.Logger)    // 記錄請求日誌
-	mux.Use(middleware.Recoverer) // 從 panic 中恢復
+	mux.Use(chiMiddleware.Logger)    // 記錄請求日誌
+	mux.Use(chiMiddleware.Recoverer) // 從 panic 中恢復
 
 	// 建立處理器實例
 	webHandler := web.NewWebHandler(app)
@@ -54,8 +55,8 @@ func NewRouter(app *server.Application) http.Handler {
 		r.Post("/auth/google/verify-token", googleVerifyH.VerifyGoogleIDToken) // Google ID Token 驗證路由
 
 		// 登出路由，應用 JWT 驗證中間件
-		r.With(app.AuthMiddleware).Post("/auth/logout", authH.Logout)
-		r.With(app.AuthMiddleware).Get("/auth/me", authH.Me)
+		r.With(middleware.AuthMiddleware(app)).Post("/auth/logout", authH.Logout)
+		r.With(middleware.AuthMiddleware(app)).Get("/auth/me", authH.Me)
 	})
 
 	// 網頁路由

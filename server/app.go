@@ -18,6 +18,11 @@ type Application struct {
 	TemplateCache map[string]*template.Template
 }
 
+// GetJWTSecret 取得 JWT Secret
+func (app *Application) GetJWTSecret() string {
+	return app.Config.JWTSecret
+}
+
 // GenerateRefreshToken 產生並儲存一個新的換新權杖
 func (app *Application) GenerateRefreshToken(userID uint, expiry time.Time) (string, error) {
 	b := make([]byte, 32) // 建立一個 32 位元組的隨機字節切片
