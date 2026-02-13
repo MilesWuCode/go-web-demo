@@ -10,15 +10,12 @@ import (
 	"web-demo/middleware"
 	"web-demo/model"
 	"web-demo/server"
-
-	"crypto/rand"
-	"encoding/base64"
+	"web-demo/util/auth"
 
 	"github.com/go-playground/locales/zh_Hant_TW"
 	ut "github.com/go-playground/universal-translator"
 	"github.com/go-playground/validator/v10"
 	zh_translations "github.com/go-playground/validator/v10/translations/zh_tw"
-	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -50,16 +47,6 @@ type AuthHandler struct {
 // NewAuthHandler 建立並回傳一個新的 AuthHandler 實例
 func NewAuthHandler(app *server.Application) *AuthHandler {
 	return &AuthHandler{App: app}
-}
-
-// generateRefreshToken 生成一個安全的隨機字串作為換新權杖
-func generateRefreshToken() (string, error) {
-	b := make([]byte, 32) // 32 bytes = 256 bits
-	_, err := rand.Read(b)
-	if err != nil {
-		return "", err
-	}
-	return base64.URLEncoding.EncodeToString(b), nil
 }
 
 // Register 處理使用者註冊請求
@@ -197,14 +184,14 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 產生 JWT token
-	token, err := h.generateToken(&user)
+	token, err := auth.GenerateToken(&user, time.Minute*time.Duration(h.App.Config.JWTExpiresIn), h.App.Config.JWTSecret)
 	if err != nil {
 		h.App.ErrorJSON(w, errors.New("無法產生認證 token"), http.StatusInternalServerError)
 		return
 	}
 
 	// 產生並儲存 Refresh Token
-	refreshToken, err := generateRefreshToken()
+	refreshToken, err := auth.GenerateRefreshToken()
 	if err != nil {
 		h.App.ErrorJSON(w, errors.New("無法產生換新 token"), http.StatusInternalServerError)
 		return
@@ -234,22 +221,6 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		"refresh_token":            refreshToken,
 		"refresh_token_expires_in": h.App.Config.JWTRefreshExpiresIn * 60, // Convert minutes to seconds
 	})
-}
-
-// generateToken 根據使用者資料產生 JWT token
-func (h *AuthHandler) generateToken(user *model.User) (string, error) {
-	claims := jwt.MapClaims{
-		"user_id": user.ID,
-		"email":   user.Email,
-		"exp":     time.Now().Add(time.Minute * time.Duration(h.App.Config.JWTExpiresIn)).Unix(),
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	signedToken, err := token.SignedString([]byte(h.App.Config.JWTSecret))
-	if err != nil {
-		return "", err
-	}
-	return signedToken, nil
 }
 
 // LogoutRequest 定義了使用者登出時預期的請求資料格式。
@@ -343,14 +314,14 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 產生新的 JWT token
-	newToken, err := h.generateToken(&user)
+	newToken, err := auth.GenerateToken(&user, time.Minute*time.Duration(h.App.Config.JWTExpiresIn), h.App.Config.JWTSecret)
 	if err != nil {
 		h.App.ErrorJSON(w, errors.New("無法產生新的認證 token"), http.StatusInternalServerError)
 		return
 	}
 
 	// 產生並儲存新的 Refresh Token
-	newRefreshToken, err := generateRefreshToken()
+	newRefreshToken, err := auth.GenerateRefreshToken()
 	if err != nil {
 		h.App.ErrorJSON(w, errors.New("無法產生新的換新 token"), http.StatusInternalServerError)
 		return
