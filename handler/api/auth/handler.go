@@ -205,9 +205,10 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 			Name:  user.Name,
 			Email: user.Email,
 		},
-		"token":                    token,
+		"access_token":             token,
 		"refresh_token":            refreshToken,
-		"refresh_token_expires_in": h.App.Config.JWTRefreshExpiresIn * 60, // Convert minutes to seconds
+		"access_token_expires_in":  h.App.Config.JWTExpiresIn * 60, // Convert minutes to seconds
+		"refresh_token_expires_in": h.App.Config.JWTRefreshExpiresIn * 60,
 	})
 }
 
