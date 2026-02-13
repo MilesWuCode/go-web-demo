@@ -2,6 +2,7 @@ package auth
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"reflect"
 	"strings"
@@ -191,22 +192,9 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 產生並儲存 Refresh Token
-	refreshToken, err := auth.GenerateRefreshToken()
+	refreshToken, err := auth.CreateAndStoreRefreshToken(h.App.DB, user.ID, time.Minute*time.Duration(h.App.Config.JWTRefreshExpiresIn))
 	if err != nil {
-		h.App.ErrorJSON(w, errors.New("無法產生換新 token"), http.StatusInternalServerError)
-		return
-	}
-
-	refreshTokenExpiry := time.Now().Add(time.Minute * time.Duration(h.App.Config.JWTRefreshExpiresIn))
-
-	// 建立 Refresh Token 紀錄到獨立資料表
-	rt := model.RefreshToken{
-		UserID:    user.ID,
-		Token:     refreshToken,
-		ExpiresAt: refreshTokenExpiry,
-	}
-	if result := h.App.DB.Create(&rt); result.Error != nil {
-		h.App.ErrorJSON(w, result.Error, http.StatusInternalServerError)
+		h.App.ErrorJSON(w, fmt.Errorf("無法建立換新 token: %w", err), http.StatusInternalServerError)
 		return
 	}
 
@@ -320,29 +308,16 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 產生並儲存新的 Refresh Token
-	newRefreshToken, err := auth.GenerateRefreshToken()
-	if err != nil {
-		h.App.ErrorJSON(w, errors.New("無法產生新的換新 token"), http.StatusInternalServerError)
-		return
-	}
-
-	newRefreshTokenExpiry := time.Now().Add(time.Minute * time.Duration(h.App.Config.JWTRefreshExpiresIn))
-
 	// 刪除舊的 Refresh Token (Rotation 機制)
 	if err := h.App.DB.Delete(&tokenRecord).Error; err != nil {
 		h.App.ErrorJSON(w, err, http.StatusInternalServerError)
 		return
 	}
 
-	// 儲存新的 Refresh Token
-	newRt := model.RefreshToken{
-		UserID:    user.ID,
-		Token:     newRefreshToken,
-		ExpiresAt: newRefreshTokenExpiry,
-	}
-	if result := h.App.DB.Create(&newRt); result.Error != nil {
-		h.App.ErrorJSON(w, result.Error, http.StatusInternalServerError)
+	// 產生並儲存新的 Refresh Token
+	newRefreshToken, err := auth.CreateAndStoreRefreshToken(h.App.DB, user.ID, time.Minute*time.Duration(h.App.Config.JWTRefreshExpiresIn))
+	if err != nil {
+		h.App.ErrorJSON(w, fmt.Errorf("無法建立新的換新 token: %w", err), http.StatusInternalServerError)
 		return
 	}
 

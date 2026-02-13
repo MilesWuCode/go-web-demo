@@ -7,11 +7,11 @@ import (
 	"net/http"
 	"time"
 
+	apiHandler "web-demo/handler/api"
 	"web-demo/model"
 	"web-demo/server"
-	apiHandler "web-demo/handler/api"
+	utilAuth "web-demo/util/auth"
 
-	"github.com/golang-jwt/jwt/v5"
 	"google.golang.org/api/idtoken"
 )
 
@@ -54,7 +54,7 @@ func (h *GoogleVerifyHandler) VerifyGoogleIDToken(w http.ResponseWriter, r *http
 	// 檢查 SocialProvider 資料表
 	var socialProvider model.SocialProvider
 	err = h.App.DB.Where("provider = ? AND provider_id = ?", "google", googleID).First(&socialProvider).Error
-	
+
 	var user model.User
 	if err != nil { // SocialProvider 不存在
 		// 檢查是否已存在相同 email 的用戶
@@ -102,15 +102,14 @@ func (h *GoogleVerifyHandler) VerifyGoogleIDToken(w http.ResponseWriter, r *http
 	}
 
 	// 產生 JWT token
-	appToken, err := h.generateToken(&user)
+	appToken, err := utilAuth.GenerateToken(&user, time.Minute*time.Duration(h.App.Config.JWTExpiresIn), h.App.Config.JWTSecret)
 	if err != nil {
 		h.App.ErrorJSON(w, fmt.Errorf("無法產生應用程式 token: %v", err), http.StatusInternalServerError)
 		return
 	}
 
 	// 產生 Refresh Token (如果應用需要)
-	refreshTokenExpiry := time.Now().Add(time.Minute * time.Duration(h.App.Config.JWTRefreshExpiresIn))
-	refreshTokenString, err := h.App.GenerateRefreshToken(user.ID, refreshTokenExpiry) // 使用應用程式的 GenerateRefreshToken
+	refreshTokenString, err := utilAuth.CreateAndStoreRefreshToken(h.App.DB, user.ID, time.Minute*time.Duration(h.App.Config.JWTRefreshExpiresIn))
 	if err != nil {
 		h.App.ErrorJSON(w, fmt.Errorf("無法產生換新權杖: %v", err), http.StatusInternalServerError)
 		return
@@ -118,29 +117,14 @@ func (h *GoogleVerifyHandler) VerifyGoogleIDToken(w http.ResponseWriter, r *http
 
 	// 回傳 token 和使用者資訊
 	h.App.WriteJSON(w, http.StatusOK, map[string]interface{}{
-		"access_token":             appToken,
-		"refresh_token":            refreshTokenString,
-		"access_token_expires_in":  h.App.Config.JWTExpiresIn * 60, // Convert minutes to seconds
-		"refresh_token_expires_in": h.App.Config.JWTRefreshExpiresIn * 60,
 		"user": apiHandler.UserResponse{
 			ID:    user.ID,
 			Name:  user.Name,
 			Email: user.Email,
 		},
+		"access_token":             appToken,
+		"refresh_token":            refreshTokenString,
+		"access_token_expires_in":  h.App.Config.JWTExpiresIn * 60, // Convert minutes to seconds
+		"refresh_token_expires_in": h.App.Config.JWTRefreshExpiresIn * 60,
 	})
-}
-
-// generateToken 根據使用者資料產生 JWT token (從 auth/handler.go 複製過來)
-func (h *GoogleVerifyHandler) generateToken(user *model.User) (string, error) {
-	claims := jwt.MapClaims{
-		"user_id": user.ID,
-		"email":   user.Email,
-		"exp":     time.Now().Add(time.Minute * time.Duration(h.App.Config.JWTExpiresIn)).Unix(),
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	signedToken, err := token.SignedString([]byte(h.App.Config.JWTSecret))
-	if err != nil {
-		return "", fmt.Errorf("無法簽署 token: %v", err)
-	}
-	return signedToken, nil
 }
