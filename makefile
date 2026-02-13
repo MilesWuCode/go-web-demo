@@ -22,3 +22,6 @@ rustfs:
 	-e RUSTFS_ACCESS_KEY=rustfsadmin \
   	-e RUSTFS_SECRET_KEY=rustfsadmin \
 	-t rustfs/rustfs:latest
+
+test:
+	go test -cover ./...
