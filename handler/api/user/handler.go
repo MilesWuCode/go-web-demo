@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"web-demo/generated/query"
 	apiHandler "web-demo/handler/api"
+	"web-demo/response"
 	"web-demo/server"
 	utilPagination "web-demo/util/pagination"
 
@@ -19,7 +20,7 @@ type UserHandler struct {
 
 // PaginatedUserResponse 是包含分頁資訊的使用者列表回應結構
 type PaginatedUserResponse struct {
-	Data       []apiHandler.UserResponse `json:"data"`
+	Data       []response.UserResponse `json:"data"`
 	Pagination utilPagination.Pagination `json:"pagination"`
 }
 
@@ -48,9 +49,9 @@ func (h *UserHandler) GetAllUsers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// --- 轉換為回應結構 ---
-	var userResponses []apiHandler.UserResponse
+	var userResponses []response.UserResponse
 	for _, user := range users {
-		userResponses = append(userResponses, apiHandler.UserResponse{
+		userResponses = append(userResponses, response.UserResponse{
 			ID:    user.ID,
 			Name:  user.Name,
 			Email: user.Email,
@@ -89,7 +90,7 @@ func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userResponse := apiHandler.UserResponse{
+	userResponse := response.UserResponse{
 		ID:    user.ID,
 		Name:  user.Name,
 		Email: user.Email,
@@ -117,7 +118,7 @@ func (h *UserHandler) GetUserByName(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userResponse := apiHandler.UserResponse{
+	userResponse := response.UserResponse{
 		ID:    user.ID,
 		Name:  user.Name,
 		Email: user.Email,

@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"time"
 
-	apiHandler "web-demo/handler/api"
 	"web-demo/model"
+	"web-demo/response"
 	"web-demo/server"
 	utilAuth "web-demo/util/auth"
 
@@ -117,7 +117,7 @@ func (h *GoogleVerifyHandler) VerifyGoogleIDToken(w http.ResponseWriter, r *http
 
 	// 回傳 token 和使用者資訊
 	h.App.WriteJSON(w, http.StatusOK, map[string]interface{}{
-		"user": apiHandler.UserResponse{
+		"user": response.UserResponse{
 			ID:    user.ID,
 			Name:  user.Name,
 			Email: user.Email,

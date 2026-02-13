@@ -10,10 +10,11 @@
     - auth:授權相關操作
     - demo:範例
   - web:網頁使用的handler
+- response:放置API回傳的資料結構
 - model:GORM使用的模型
 - public:放置css/image/js的靜態文件
 - router:提供handler註冊路由器腳本
 - server:伺服器啓動腳本
-- middleware:路由器的中間層腳本(尚未從server獨立出來)
+- middleware:路由器的中間層腳本
 - template:放置html模板供
 - util:放置工具函式腳本

@@ -7,9 +7,9 @@ import (
 	"reflect"
 	"strings"
 	"time"
-	apiHandler "web-demo/handler/api"
 	"web-demo/middleware"
 	"web-demo/model"
+	"web-demo/response"
 	"web-demo/server"
 	"web-demo/util/auth"
 
@@ -129,7 +129,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	// 回傳成功回應 (不包含密碼)
 	h.App.WriteJSON(w, http.StatusCreated, map[string]interface{}{
 		"message": "使用者註冊成功",
-		"user": apiHandler.UserResponse{ // 使用現有的 UserResponse 結構
+		"user": response.UserResponse{ // 使用現有的 UserResponse 結構
 			ID:    user.ID,
 			Name:  user.Name,
 			Email: user.Email,
@@ -199,7 +199,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.App.WriteJSON(w, http.StatusOK, map[string]interface{}{
-		"user": apiHandler.UserResponse{
+		"user": response.UserResponse{
 			ID:    user.ID,
 			Name:  user.Name,
 			Email: user.Email,
@@ -314,7 +314,7 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.App.WriteJSON(w, http.StatusOK, map[string]interface{}{
-		"user": apiHandler.UserResponse{
+		"user": response.UserResponse{
 			ID:    user.ID,
 			Name:  user.Name,
 			Email: user.Email,
@@ -346,7 +346,7 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.App.WriteJSON(w, http.StatusOK, apiHandler.UserResponse{
+	h.App.WriteJSON(w, http.StatusOK, response.UserResponse{
 		ID:    user.ID,
 		Name:  user.Name,
 		Email: user.Email,
